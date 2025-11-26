@@ -20,11 +20,12 @@
 #include "sdb.h"
 
 static int is_batch_mode = false;
+static char* delimiter = " ";
 
 void init_regex();
 void init_wp_pool();
 
-/* We use the `readline' library to provide more flexibility to read from stdin. */
+/* We use the `readline` library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
   static char *line_read = NULL;
 
@@ -47,9 +48,112 @@ static int cmd_c(char *args) {
   return 0;
 }
 
+static struct {
+  const char *name;
+  const char *description;
+  void (*handler) ();
+} info_subcmd_table [] = {
+  { "r", "Display registers", isa_reg_display },
+  { "w", "Display watchpoints", isa_watchpoint_display },
+  /* TODO: Add more subcommands */
+};
+
+#define NR_SUBCMD ARRLEN(info_subcmd_table)
 
 static int cmd_q(char *args) {
+  printf("Exit NEMU, return value is -1.\n");
+  nemu_state.state = NEMU_QUIT;
   return -1;
+}
+
+static int cmd_si(char *args) {
+  if (args == NULL) {
+    cpu_exec(1);
+    return 0;
+  }
+
+  if (strlen(args) > 15) {
+    printf("si command cannot be longer than 15 characters.\n");
+    return 0;
+  }
+
+  char *args_end = args + strlen(args);
+
+  char *arg = strtok(args, delimiter);
+  if (arg == NULL) {
+    cpu_exec(1);
+    return 0;
+  }
+
+  char *arg_tail = arg + strlen(arg) + 1;
+  if (arg_tail < args_end) {
+    char *tmp = strtok(arg_tail, delimiter);
+    if (tmp != NULL) {
+      printf("Ambiguous si command \"%s%s%s\".\n",
+        arg, delimiter, arg_tail);
+      return 0;
+    }
+  }
+
+  int length = strlen(arg);
+  for (int i = 0; i < length; i++) {
+    if (!isdigit((unsigned char)arg[i])) {
+      printf("Invalid number \"%s\".\n", arg);
+      return 0;
+    }
+  }
+
+  uint64_t num = strtoull(arg, NULL, 10);
+  cpu_exec(num);
+
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  if (args == NULL) {
+    printf("info command cannot be empty.\n");
+    return 0;
+  }
+
+  if (strlen(args) > 15) {
+    printf("info command cannot be longer than 15 characters.\n");
+    return 0;
+  }
+  
+  char *args_end = args + strlen(args);
+
+  char *arg = strtok(args, delimiter);
+  if (arg == NULL) {
+    printf("info command cannot be empty.\n");
+    return 0;
+  }
+
+  char *arg_tail = arg + strlen(arg) + 1;
+  if (arg_tail < args_end) {
+    char *tmp = strtok(arg_tail, delimiter);
+    if (tmp != NULL) {
+      printf("Ambiguous info command \"%s%s%s\".\n",
+             arg, delimiter, arg_tail);
+      return 0;
+    }
+  }
+
+  int i;
+  for (i = 0; i < NR_SUBCMD; i++) {
+    if (strcmp(arg, info_subcmd_table[i].name) == 0) {
+      info_subcmd_table[i].handler();
+      break;
+    }
+  }
+  if (i == NR_SUBCMD) {
+    printf("Ambiguous info command \"%s\".\n", arg);
+  }
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  // todo: parse 'x 10 $esp'
+  return 0;
 }
 
 static int cmd_help(char *args);
@@ -59,12 +163,13 @@ static struct {
   const char *description;
   int (*handler) (char *);
 } cmd_table [] = {
-  { "help", "Display information about all supported commands", cmd_help },
-  { "c", "Continue the execution of the program", cmd_c },
-  { "q", "Exit NEMU", cmd_q },
-
+  { "help", "Display information about all supported commands.", cmd_help },
+  { "c", "Continue the execution of the program.", cmd_c },
+  { "q", "Exit NEMU.", cmd_q },
+  { "si", "Step one instruction.", cmd_si },
+  { "info", "Display information about the current state of the program.", cmd_info },
+  { "x", "Scan memory.", cmd_x },
   /* TODO: Add more commands */
-
 };
 
 #define NR_CMD ARRLEN(cmd_table)
@@ -87,7 +192,7 @@ static int cmd_help(char *args) {
         return 0;
       }
     }
-    printf("Unknown command '%s'\n", arg);
+    printf("Unknown command \"%s\".\n", arg);
   }
   return 0;
 }
@@ -106,7 +211,7 @@ void sdb_mainloop() {
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
-    char *cmd = strtok(str, " ");
+    char *cmd = strtok(str, delimiter);
     if (cmd == NULL) { continue; }
 
     /* treat the remaining string as the arguments,
@@ -130,7 +235,7 @@ void sdb_mainloop() {
       }
     }
 
-    if (i == NR_CMD) { printf("Unknown command '%s'\n", cmd); }
+    if (i == NR_CMD) { printf("Unknown command \"%s\".\n", cmd); }
   }
 }
 

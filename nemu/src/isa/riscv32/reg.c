@@ -24,6 +24,15 @@ const char *regs[] = {
 };
 
 void isa_reg_display() {
+  printf("Registers:\n");
+  for (int i = 0; i < 32; i++) {
+    printf("%-8s 0x%-8" PRIx32 "  %-16" PRIu32 "\n",
+           regs[i], gpr(i), gpr(i));
+  }
+}
+
+void isa_watchpoint_display() {
+  printf("todo: display watchpoints\n");
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {
