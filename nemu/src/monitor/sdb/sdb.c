@@ -20,7 +20,7 @@
 #include "sdb.h"
 
 static int is_batch_mode = false;
-static const char delimiter = ' ';
+static char* delimiter = " ";
 
 void init_regex();
 void init_wp_pool();
@@ -83,13 +83,11 @@ static int cmd_info(char *args) {
   }
   
   char *args_end = args + strlen(args);
-  printf("CHECK\n");
 
-  char *arg = strtok(args, &delimiter);
-  printf("CHECK: arg is %2d\n", *arg);
-  while (*arg == delimiter) {
-    printf("CHECK: arg is %2d\n", *arg);
-    arg = strtok(arg, &delimiter);
+  char *arg = strtok(args, delimiter);
+  if (arg == NULL) {
+    printf("info command cannot be empty\n");
+    return 0;
   }
 
   char *arg_tail = arg + strlen(arg) + 1;
@@ -166,7 +164,7 @@ void sdb_mainloop() {
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
-    char *cmd = strtok(str, &delimiter);
+    char *cmd = strtok(str, delimiter);
     if (cmd == NULL) { continue; }
 
     /* treat the remaining string as the arguments,
