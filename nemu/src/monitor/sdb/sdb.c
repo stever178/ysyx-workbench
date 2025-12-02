@@ -54,6 +54,26 @@ static int cmd_q(char *args) {
   return -1;
 }
 
+static int cmd_si(char *args) {
+  cpu_exec(1);
+  return 0;
+}
+
+static int cmd_info(char *args) {
+  switch (*args) {
+    case 'r':
+      isa_reg_display();
+      break;
+    case 'w':
+      printf("todo: display watchpoints\n");
+      break;
+    default:
+      printf("Unknown command '%s'\n", args);
+      break;
+  }
+  return 0;
+}
+
 static int cmd_help(char *args);
 
 static struct {
@@ -64,7 +84,8 @@ static struct {
   { "help", "Display information about all supported commands", cmd_help },
   { "c", "Continue the execution of the program", cmd_c },
   { "q", "Exit NEMU", cmd_q },
-
+  { "si", "Step one instruction", cmd_si },
+  { "info", "Display information about the current state of the program", cmd_info },
   /* TODO: Add more commands */
 
 };
