@@ -85,6 +85,9 @@ static int cmd_info(char *args) {
   char *args_end = args + strlen(args);
 
   char *arg = strtok(args, &delimiter);
+  while (*arg == delimiter) {
+    arg = strtok(NULL, &delimiter);
+  }
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
