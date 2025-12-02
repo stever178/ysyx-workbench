@@ -68,7 +68,6 @@ static int cmd_q(char *args) {
 
 static int cmd_si(char *args) {
   if (args == NULL) {
-    printf("single step\n");
     cpu_exec(1);
     return 0;
   }
@@ -82,7 +81,6 @@ static int cmd_si(char *args) {
 
   char *arg = strtok(args, delimiter);
   if (arg == NULL) {
-    printf("single step\n");
     cpu_exec(1);
     return 0;
   }
@@ -106,13 +104,7 @@ static int cmd_si(char *args) {
   }
 
   uint64_t num = strtoull(arg, NULL, 10);
-  if (num == 0) {
-    printf("single step\n");
-    cpu_exec(1);
-  } else {
-    printf("step %lu\n", (unsigned long)num);
-    cpu_exec(num);
-  }
+  cpu_exec(num);
 
   return 0;
 }
