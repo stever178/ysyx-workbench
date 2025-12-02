@@ -86,8 +86,8 @@ static int cmd_info(char *args) {
 
   char *arg = strtok(args, &delimiter);
   while (*arg == delimiter) {
+    printf("CHECK: arg is %2d\n", *arg);
     arg = strtok(arg, &delimiter);
-    printf("CHECK\n");
   }
 
   char *arg_tail = arg + strlen(arg) + 1;
