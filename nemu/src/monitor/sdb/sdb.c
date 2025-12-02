@@ -72,6 +72,10 @@ static int cmd_si(char *args) {
 
 static int cmd_info(char *args) {
   char *arg = strtok(args, " ");
+  if (arg == NULL) {
+    printf("SUBCMD cannot be empty\n");
+    return 0;
+  }
 
   int i;
   for (i = 0; i < NR_SUBCMD; i++) {
