@@ -25,7 +25,7 @@ static char* delimiter = " ";
 void init_regex();
 void init_wp_pool();
 
-/* We use the `readline' library to provide more flexibility to read from stdin. */
+/* We use the `readline` library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
   static char *line_read = NULL;
 
@@ -67,18 +67,56 @@ static int cmd_q(char *args) {
 }
 
 static int cmd_si(char *args) {
+  if (args == NULL) {
+    printf("single step\n");
+    cpu_exec(1);
+    return 0;
+  }
+
   if (strlen(args) > 15) {
     printf("info command cannot be longer than 15 characters\n");
     return 0;
   }
 
-  cpu_exec(1);
+  char *args_end = args + strlen(args);
+
+  char *arg = strtok(args, delimiter);
+  if (arg == NULL) {
+    printf("single step\n");
+    cpu_exec(1);
+    return 0;
+  }
+
+  char *arg_tail = arg + strlen(arg) + 1;
+  if (arg_tail < args_end) {
+    printf("Ambiguous si command \"%s%s%s\"\n",
+           arg, delimiter, arg_tail);
+    return 0;
+  }
+
+  int length = strlen(arg);
+  for (int i = 0; i < length; i++) {
+    if (!isdigit((unsigned char)arg[i])) {
+      printf("Invalid number \"%s\".\n", arg);
+      return 0;
+    }
+  }
+
+  uint64_t num = strtoull(arg, NULL, 10);
+  if (num == 0) {
+    printf("single step\n");
+    cpu_exec(1);
+  } else {
+    printf("step %lu\n", (unsigned long)num);
+    cpu_exec(num);
+  }
+
   return 0;
 }
 
 static int cmd_info(char *args) {
-  if (args == 0) {
-    // printf("info command cannot be empty\n");
+  if (args == NULL) {
+    printf("info command cannot be empty\n");
     return 0;
   }
 
@@ -97,7 +135,8 @@ static int cmd_info(char *args) {
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
-    printf("Ambiguous info command \"%s %s\"\n", arg, arg_tail);
+    printf("Ambiguous info command \"%s%s%s\"\n",
+           arg, delimiter, arg_tail);
     return 0;
   }
 
@@ -150,7 +189,7 @@ static int cmd_help(char *args) {
         return 0;
       }
     }
-    printf("Unknown command '%s'\n", arg);
+    printf("Unknown command \"%s\"\n", arg);
   }
   return 0;
 }
@@ -193,7 +232,7 @@ void sdb_mainloop() {
       }
     }
 
-    if (i == NR_CMD) { printf("Unknown command '%s'\n", cmd); }
+    if (i == NR_CMD) { printf("Unknown command \"%s\"\n", cmd); }
   }
 }
 
