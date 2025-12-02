@@ -89,9 +89,12 @@ static int cmd_si(char *args) {
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
-    printf("Ambiguous si command \"%s%s%s\"\n",
-           arg, delimiter, arg_tail);
-    return 0;
+    char *tmp = strtok(arg_tail, delimiter);
+    if (tmp != NULL) {
+      printf("Ambiguous si command \"%s%s%s\"\n",
+        arg, delimiter, arg_tail);
+      return 0;
+    }
   }
 
   int length = strlen(arg);
