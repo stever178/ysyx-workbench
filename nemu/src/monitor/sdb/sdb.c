@@ -61,7 +61,7 @@ static struct {
 #define NR_SUBCMD ARRLEN(info_subcmd_table)
 
 static int cmd_q(char *args) {
-  printf("Exit NEMU, return value is -1\n");
+  printf("Exit NEMU, return value is -1.\n");
   nemu_state.state = NEMU_QUIT;
   return -1;
 }
@@ -73,7 +73,7 @@ static int cmd_si(char *args) {
   }
 
   if (strlen(args) > 15) {
-    printf("info command cannot be longer than 15 characters\n");
+    printf("si command cannot be longer than 15 characters.\n");
     return 0;
   }
 
@@ -89,7 +89,7 @@ static int cmd_si(char *args) {
   if (arg_tail < args_end) {
     char *tmp = strtok(arg_tail, delimiter);
     if (tmp != NULL) {
-      printf("Ambiguous si command \"%s%s%s\"\n",
+      printf("Ambiguous si command \"%s%s%s\".\n",
         arg, delimiter, arg_tail);
       return 0;
     }
@@ -111,12 +111,12 @@ static int cmd_si(char *args) {
 
 static int cmd_info(char *args) {
   if (args == NULL) {
-    printf("info command cannot be empty\n");
+    printf("info command cannot be empty.\n");
     return 0;
   }
 
   if (strlen(args) > 15) {
-    printf("info command cannot be longer than 15 characters\n");
+    printf("info command cannot be longer than 15 characters.\n");
     return 0;
   }
   
@@ -124,13 +124,13 @@ static int cmd_info(char *args) {
 
   char *arg = strtok(args, delimiter);
   if (arg == NULL) {
-    printf("info command cannot be empty\n");
+    printf("info command cannot be empty.\n");
     return 0;
   }
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
-    printf("Ambiguous info command \"%s%s%s\"\n",
+    printf("Ambiguous info command \"%s%s%s\".\n",
            arg, delimiter, arg_tail);
     return 0;
   }
@@ -143,8 +143,13 @@ static int cmd_info(char *args) {
     }
   }
   if (i == NR_SUBCMD) {
-    printf("Ambiguous info command \"%s\"\n", arg);
+    printf("Ambiguous info command \"%s\".\n", arg);
   }
+  return 0;
+}
+
+static int cmd_x(char *args) {
+  // todo: parse 'x 10 $esp'
   return 0;
 }
 
@@ -155,13 +160,13 @@ static struct {
   const char *description;
   int (*handler) (char *);
 } cmd_table [] = {
-  { "help", "Display information about all supported commands", cmd_help },
-  { "c", "Continue the execution of the program", cmd_c },
-  { "q", "Exit NEMU", cmd_q },
-  { "si", "Step one instruction", cmd_si },
-  { "info", "Display information about the current state of the program", cmd_info },
+  { "help", "Display information about all supported commands.", cmd_help },
+  { "c", "Continue the execution of the program.", cmd_c },
+  { "q", "Exit NEMU.", cmd_q },
+  { "si", "Step one instruction.", cmd_si },
+  { "info", "Display information about the current state of the program.", cmd_info },
+  { "x", "Scan memory.", cmd_x },
   /* TODO: Add more commands */
-
 };
 
 #define NR_CMD ARRLEN(cmd_table)
@@ -184,7 +189,7 @@ static int cmd_help(char *args) {
         return 0;
       }
     }
-    printf("Unknown command \"%s\"\n", arg);
+    printf("Unknown command \"%s\".\n", arg);
   }
   return 0;
 }
@@ -227,7 +232,7 @@ void sdb_mainloop() {
       }
     }
 
-    if (i == NR_CMD) { printf("Unknown command \"%s\"\n", cmd); }
+    if (i == NR_CMD) { printf("Unknown command \"%s\".\n", cmd); }
   }
 }
 
