@@ -81,14 +81,16 @@ static int cmd_info(char *args) {
     printf("info command cannot be longer than 15 characters\n");
     return 0;
   }
+  
+  char *args_end = args + strlen(args);
   printf("CHECK\n");
 
-  char *args_end = args + strlen(args);
-
   char *arg = strtok(args, &delimiter);
+  printf("CHECK\n");
   while (*arg == delimiter) {
     arg = strtok(NULL, &delimiter);
   }
+  printf("CHECK\n");
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
