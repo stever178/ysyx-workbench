@@ -47,6 +47,17 @@ static int cmd_c(char *args) {
   return 0;
 }
 
+static struct {
+  const char *name;
+  const char *description;
+  void (*handler) ();
+} subcmd_table [] = {
+  { "r", "Display registers", isa_reg_display },
+  { "w", "Display watchpoints", NULL },
+  /* TODO: Add more subcommands */
+};
+
+#define NR_SUBCMD ARRLEN(subcmd_table)
 
 static int cmd_q(char *args) {
   printf("Exit NEMU, return value is -1\n");
@@ -60,16 +71,17 @@ static int cmd_si(char *args) {
 }
 
 static int cmd_info(char *args) {
-  switch (*args) {
-    case 'r':
-      isa_reg_display();
+  char *arg = strtok(args, " ");
+
+  int i;
+  for (i = 0; i < NR_SUBCMD; i++) {
+    if (strcmp(arg, subcmd_table[i].name) == 0) {
+      subcmd_table[i].handler();
       break;
-    case 'w':
-      printf("todo: display watchpoints\n");
-      break;
-    default:
-      printf("Unknown command '%s'\n", args);
-      break;
+    }
+  }
+  if (i == NR_SUBCMD) {
+    printf("Unknown SUBCMD '%s'\n", arg);
   }
   return 0;
 }
