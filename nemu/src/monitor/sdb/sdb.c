@@ -17,6 +17,7 @@
 #include <cpu/cpu.h>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <memory/paddr.h>
 #include "sdb.h"
 
 static int is_batch_mode = false;
@@ -79,6 +80,7 @@ static int cmd_si(char *args) {
 
   char *args_end = args + strlen(args);
 
+  /* split */
   char *arg = strtok(args, delimiter);
   if (arg == NULL) {
     cpu_exec(1);
@@ -95,6 +97,7 @@ static int cmd_si(char *args) {
     }
   }
 
+  /* check isdigit */
   int length = strlen(arg);
   for (int i = 0; i < length; i++) {
     if (!isdigit((unsigned char)arg[i])) {
@@ -152,7 +155,74 @@ static int cmd_info(char *args) {
 }
 
 static int cmd_x(char *args) {
-  // todo: parse 'x 10 $esp'
+  /* 	x N EXPR */
+
+  if (args == NULL) {
+    printf("x command cannot be empty.\n");
+    return 0;
+  }
+
+  char *args_end = args + strlen(args);
+
+  /* split */
+  char *n_str = strtok(args, delimiter);
+  if (n_str == NULL) {
+    printf("x command cannot be empty.\n");
+    return 0;
+  }
+
+  /* check isdigit */
+  int len = strlen(n_str);
+  for (int i = 0; i < len; i++) {
+    if (!isdigit((unsigned char)n_str[i])) {
+      printf("Invalid number \"%s\".\n", n_str);
+      return 0;
+    }
+  }
+
+  /* N */
+  uint64_t num = strtoull(n_str, NULL, 10);
+  if (num == 0) {
+    printf("The number of bytes to examine must be greater than 0.\n");
+    return 0;
+  }
+
+  /* EXPR */
+  char *expr_str = n_str + strlen(n_str) + 1;
+  if (expr_str >= args_end) {
+    printf("Expression is required for x command.\n");
+    return 0;
+  }
+
+  while (expr_str < args_end && *expr_str == ' ') {
+    expr_str++;
+  }
+  if (expr_str >= args_end || *expr_str == '\0') {
+    printf("Expression is required for x command.\n");
+    return 0;
+  }
+  printf("[check] expr_str is %s\n", expr_str);
+
+  /* todo */
+  bool success = true;
+  // paddr_t addr = (paddr_t)expr(expr_str, &success);
+  paddr_t addr = (paddr_t)strtoul(expr_str, NULL, 0);
+  printf("[check] addr is %" PRIu32 "\n", (word_t)addr);
+
+  if (!success) {
+    printf("Bad expression \"%s\".\n", expr_str);
+    return 0;
+  }
+
+  /* print */
+  for (uint64_t i = 0; i < num; i++) {
+    paddr_t cur = addr + i * 4;
+    /* note */
+    word_t data = paddr_read(cur, 4);
+    printf("0x%08" PRIxPTR ": 0x%08" PRIx64 "\n",
+           (uintptr_t)cur, (uint64_t)data);
+  }
+
   return 0;
 }
 
