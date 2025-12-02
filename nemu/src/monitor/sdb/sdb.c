@@ -20,6 +20,7 @@
 #include "sdb.h"
 
 static int is_batch_mode = false;
+static const char delimiter = ' ';
 
 void init_regex();
 void init_wp_pool();
@@ -51,13 +52,13 @@ static struct {
   const char *name;
   const char *description;
   void (*handler) ();
-} subcmd_table [] = {
+} info_subcmd_table [] = {
   { "r", "Display registers", isa_reg_display },
   { "w", "Display watchpoints", isa_watchpoint_display },
   /* TODO: Add more subcommands */
 };
 
-#define NR_SUBCMD ARRLEN(subcmd_table)
+#define NR_SUBCMD ARRLEN(info_subcmd_table)
 
 static int cmd_q(char *args) {
   printf("Exit NEMU, return value is -1\n");
@@ -71,13 +72,14 @@ static int cmd_si(char *args) {
 }
 
 static int cmd_info(char *args) {
-  char *args_end = args + strlen(args);
-
-  char *arg = strtok(args, " ");
-  if (arg == NULL) {
-    printf("SUBCMD cannot be empty\n");
+  if (args == 0) {
+    printf("info command cannot be empty\n");
     return 0;
   }
+
+  char *args_end = args + strlen(args);
+
+  char *arg = strtok(args, &delimiter);
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
@@ -87,8 +89,8 @@ static int cmd_info(char *args) {
 
   int i;
   for (i = 0; i < NR_SUBCMD; i++) {
-    if (strcmp(arg, subcmd_table[i].name) == 0) {
-      subcmd_table[i].handler();
+    if (strcmp(arg, info_subcmd_table[i].name) == 0) {
+      info_subcmd_table[i].handler();
       break;
     }
   }
@@ -153,7 +155,7 @@ void sdb_mainloop() {
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
-    char *cmd = strtok(str, " ");
+    char *cmd = strtok(str, &delimiter);
     if (cmd == NULL) { continue; }
 
     /* treat the remaining string as the arguments,
