@@ -67,13 +67,18 @@ static int cmd_q(char *args) {
 }
 
 static int cmd_si(char *args) {
+  if (strlen(args) > 15) {
+    printf("info command cannot be longer than 15 characters\n");
+    return 0;
+  }
+
   cpu_exec(1);
   return 0;
 }
 
 static int cmd_info(char *args) {
   if (args == 0) {
-    printf("info command cannot be empty\n");
+    // printf("info command cannot be empty\n");
     return 0;
   }
 
