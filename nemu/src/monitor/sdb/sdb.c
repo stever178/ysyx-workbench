@@ -130,9 +130,12 @@ static int cmd_info(char *args) {
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
-    printf("Ambiguous info command \"%s%s%s\".\n",
-           arg, delimiter, arg_tail);
-    return 0;
+    char *tmp = strtok(arg_tail, delimiter);
+    if (tmp != NULL) {
+      printf("Ambiguous info command \"%s%s%s\".\n",
+             arg, delimiter, arg_tail);
+      return 0;
+    }
   }
 
   int i;
