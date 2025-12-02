@@ -81,7 +81,7 @@ static int cmd_info(char *args) {
 
   char *arg_tail = arg + strlen(arg) + 1;
   if (arg_tail < args_end) {
-    printf("Unknown SUBCMD '%s %s'\n", arg, arg_tail);
+    printf("Ambiguous info command \"%s %s\"\n", arg, arg_tail);
     return 0;
   }
 
@@ -93,7 +93,7 @@ static int cmd_info(char *args) {
     }
   }
   if (i == NR_SUBCMD) {
-    printf("Unknown SUBCMD '%s'\n", arg);
+    printf("Ambiguous info command \"%s\"\n", arg);
   }
   return 0;
 }
