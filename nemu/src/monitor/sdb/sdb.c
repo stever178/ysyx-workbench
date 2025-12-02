@@ -71,15 +71,17 @@ static int cmd_si(char *args) {
 }
 
 static int cmd_info(char *args) {
+  char *args_end = args + strlen(args);
+
   char *arg = strtok(args, " ");
   if (arg == NULL) {
     printf("SUBCMD cannot be empty\n");
     return 0;
   }
 
-  char *arg_end = arg + strlen(arg);
-  if (arg_end != NULL) {
-    printf("Unknown SUBCMD '%s'\n", args);
+  char *arg_tail = arg + strlen(arg) + 1;
+  if (arg_tail < args_end) {
+    printf("Unknown SUBCMD '%s %s'\n", arg, arg_tail);
     return 0;
   }
 
