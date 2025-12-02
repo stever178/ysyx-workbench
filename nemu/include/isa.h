@@ -31,6 +31,7 @@ void init_isa();
 // reg
 extern CPU_state cpu;
 void isa_reg_display();
+void isa_watchpoint_display();
 word_t isa_reg_str2val(const char *name, bool *success);
 
 // exec

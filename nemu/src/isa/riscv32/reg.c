@@ -30,6 +30,10 @@ void isa_reg_display() {
   }
 }
 
+void isa_watchpoint_display() {
+  printf("todo: display watchpoints\n");
+}
+
 word_t isa_reg_str2val(const char *s, bool *success) {
   return 0;
 }

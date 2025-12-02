@@ -53,7 +53,7 @@ static struct {
   void (*handler) ();
 } subcmd_table [] = {
   { "r", "Display registers", isa_reg_display },
-  { "w", "Display watchpoints", NULL },
+  { "w", "Display watchpoints", isa_watchpoint_display },
   /* TODO: Add more subcommands */
 };
 
@@ -74,6 +74,12 @@ static int cmd_info(char *args) {
   char *arg = strtok(args, " ");
   if (arg == NULL) {
     printf("SUBCMD cannot be empty\n");
+    return 0;
+  }
+
+  char *arg_end = arg + strlen(arg);
+  if (arg_end != NULL) {
+    printf("Unknown SUBCMD '%s'\n", args);
     return 0;
   }
 
