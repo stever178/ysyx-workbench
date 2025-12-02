@@ -83,12 +83,11 @@ static int cmd_info(char *args) {
   }
   
   char *args_end = args + strlen(args);
-  printf("CHECK\n");
 
   char *arg = strtok(args, &delimiter);
   printf("CHECK\n");
   while (*arg == delimiter) {
-    arg = strtok(NULL, &delimiter);
+    arg = strtok(arg, &delimiter);
   }
   printf("CHECK\n");
 
