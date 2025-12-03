@@ -201,13 +201,12 @@ static int cmd_x(char *args) {
     printf("Expression is required for x command.\n");
     return 0;
   }
-  printf("[check] expr_str is %s\n", expr_str);
-
-  /* todo */
+  
   bool success = true;
-  // paddr_t addr = (paddr_t)expr(expr_str, &success);
-  paddr_t addr = (paddr_t)strtoul(expr_str, NULL, 0);
-  printf("[check] addr is %" PRIu32 "\n", (word_t)addr);
+  printf("[check] expr_str is %s\n", expr_str);
+  paddr_t base_addr = (paddr_t)expr(expr_str, &success);
+  /* paddr_t base_addr = (paddr_t)strtoul(expr_str, NULL, 0); */
+  printf("[check] addr is %" PRIu32 "\n", base_addr);
 
   if (!success) {
     printf("Bad expression \"%s\".\n", expr_str);
@@ -216,11 +215,9 @@ static int cmd_x(char *args) {
 
   /* print */
   for (uint64_t i = 0; i < num; i++) {
-    paddr_t cur = addr + i * 4;
-    /* note */
-    word_t data = paddr_read(cur, 4);
-    printf("0x%08" PRIxPTR ": 0x%08" PRIx64 "\n",
-           (uintptr_t)cur, (uint64_t)data);
+    paddr_t cur_addr = base_addr + i * 4;
+    word_t data = paddr_read(cur_addr, 4);
+    printf("0x%08" PRIx32 ": 0x%08" PRIx32 "\n", cur_addr, data);
   }
 
   return 0;
