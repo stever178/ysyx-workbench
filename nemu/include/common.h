@@ -21,6 +21,9 @@
 #include <stdbool.h>
 #include <string.h>
 
+#include <errno.h>
+#include <limits.h>
+
 #include <generated/autoconf.h>
 #include <macro.h>
 

@@ -73,10 +73,10 @@ static int cmd_si(char *args) {
     return 0;
   }
 
-  if (strlen(args) > 15) {
-    printf("si command cannot be longer than 15 characters.\n");
-    return 0;
-  }
+  // if (strlen(args) > 15) {
+  //   printf("si command cannot be longer than 15 characters.\n");
+  //   return 0;
+  // }
 
   char *args_end = args + strlen(args);
 
@@ -106,9 +106,19 @@ static int cmd_si(char *args) {
     }
   }
 
-  uint64_t num = strtoull(arg, NULL, 10);
+  errno = 0;
+  char *end = NULL;
+  uint64_t num = strtoull(arg, &end, 10);
+  if (end == arg || *end != '\0') {
+    printf("Invalid number \"%s\".\n", arg);
+    return 0;
+  }
+  if (num == ULLONG_MAX && errno == ERANGE) {
+    printf("Numeric constant too large.\n");
+    return 0;
+  }
+  
   cpu_exec(num);
-
   return 0;
 }
 
@@ -118,10 +128,10 @@ static int cmd_info(char *args) {
     return 0;
   }
 
-  if (strlen(args) > 15) {
-    printf("info command cannot be longer than 15 characters.\n");
-    return 0;
-  }
+  // if (strlen(args) > 15) {
+  //   printf("info command cannot be longer than 15 characters.\n");
+  //   return 0;
+  // }
   
   char *args_end = args + strlen(args);
 
@@ -181,7 +191,18 @@ static int cmd_x(char *args) {
   }
 
   /* N */
-  uint64_t num = strtoull(n_str, NULL, 10);
+  errno = 0;
+  char *end = NULL;
+  uint64_t num = strtoull(n_str, &end, 10);
+  if (end == n_str || *end != '\0') {
+    printf("Invalid number \"%s\".\n", n_str);
+    return 0;
+  }
+  if (num == ULLONG_MAX && errno == ERANGE) {
+    printf("Numeric constant too large.\n");
+    return 0;
+  }
+
   if (num == 0) {
     printf("The number of bytes to examine must be greater than 0.\n");
     return 0;
@@ -203,10 +224,9 @@ static int cmd_x(char *args) {
   }
   
   bool success = true;
-  printf("[check] expr_str is %s\n", expr_str);
+  Log("before expr(), expr_str is %s", expr_str);
   paddr_t base_addr = (paddr_t)expr(expr_str, &success);
-  /* paddr_t base_addr = (paddr_t)strtoul(expr_str, NULL, 0); */
-  printf("[check] addr is %" PRIu32 "\n", base_addr);
+  Log("after expr(), addr is %" PRIu32 "", base_addr);
 
   if (!success) {
     printf("Bad expression \"%s\".\n", expr_str);
