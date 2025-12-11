@@ -22,7 +22,7 @@
 
 enum {
   TK_NOTYPE = 256, TK_EQ,
-
+  TK_INT, TK_HEX,
   /* TODO: Add more token types */
 
 };
@@ -37,7 +37,14 @@ static struct rule {
    */
 
   {" +", TK_NOTYPE},    // spaces
+  {"0[xX][0-9a-fA-F]+", TK_HEX},
+  {"[0-9]+", TK_INT},
   {"\\+", '+'},         // plus
+  {"-", '-'},           // minus
+  {"\\*", '*'},
+  {"/", '/'},
+  {"\\(", '('},
+  {"\\)", ')'},
   {"==", TK_EQ},        // equal
 };
 
@@ -68,7 +75,7 @@ typedef struct token {
 } Token;
 
 static Token tokens[32] __attribute__((used)) = {};
-static int nr_token __attribute__((used))  = 0;
+static uint nr_token __attribute__((used))  = 0;
 
 static bool make_token(char *e) {
   int position = 0;
@@ -96,7 +103,28 @@ static bool make_token(char *e) {
          */
 
         switch (rules[i].token_type) {
-          default: TODO();
+          case TK_NOTYPE: {
+            break;
+          }
+          case TK_INT:
+          case TK_HEX: 
+          case '+':
+          case '-':
+          case '*':
+          case '/':
+          case '(':
+          case ')': {
+            tokens[nr_token].type = rules[i].token_type;
+            for (int j = 0; j < substr_len; j++) {
+              tokens[nr_token].str[j] = *(substr_start + j);
+            }
+            tokens[nr_token].str[substr_len] = 0;
+            Log("  substr is %s", tokens[nr_token].str);
+            nr_token ++;
+            break;
+          }
+          default:
+            panic("Unknown token_type: %s\n", substr_start);
         }
 
         break;
@@ -112,15 +140,148 @@ static bool make_token(char *e) {
   return true;
 }
 
+bool check_parentheses(uint p, uint q) {
+  if (tokens[p].str[0] == '(') {
+    p++;
+    uint cnt = 1;
+    while (p <= q) {
+      if (tokens[p].str[0] == '(') {
+        cnt++;
+      }
+      if (tokens[p].str[0] == ')') {
+        cnt--;
+      }
+      if (cnt < 0) {
+        return false;
+      }
+      p++;
+    } // end of while
+    if (cnt == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+word_t eval(const uint p, const uint q, bool *success) {
+  if (p > q) {
+    /* Bad expression */
+    *success = false;
+    return 0;
+  }
+  else if (p == q) {
+    /* Single token.
+     * For now this token should be a number.
+     * Return the value of the number.
+     */
+    errno = 0;
+    char *nptr = tokens[p].str;
+    char *end = NULL;
+    uint64_t num = strtoull(nptr, &end, 0);
+
+    *success = false;
+    if (end == nptr || *end != '\0') {
+      printf("Invalid number \"%s\".\n", nptr);
+      return 0;
+    }
+    if (num == ULLONG_MAX && errno == ERANGE) {
+      printf("Numeric constant too large.\n");
+      return 0;
+    }
+
+    *success = true;
+    return (word_t)num;
+  }
+  else if (check_parentheses(p, q) == true) {
+    /* The expression is surrounded by a matched pair of parentheses.
+     * If that is the case, just throw away the parentheses.
+     */
+    return eval(p + 1, q - 1, success);
+  }
+  else {
+    /* We should do more things here. */
+
+    /* 寻找主运算符 */
+    uint op_pos = -1;
+
+    uint cnt = 0;
+    for (uint i = p; i <= q; i++) {
+      Log("token[%d]: %s", i, tokens[i].str);
+      if (tokens[i].str[0] == '(') {
+        cnt++;
+      }
+      if (tokens[i].str[0] == ')') {
+        cnt--;
+      }
+      if (cnt < 0) {
+        printf("A syntax error in expression.\n");
+        *success = false;
+        return 0;
+      }
+
+      if (cnt == 0) {
+        if (tokens[i].str[0] == '*' || tokens[i].str[0] == '/') {
+          op_pos = i;
+        }
+        if (tokens[i].str[0] == '+' || tokens[i].str[0] == '-') {
+          op_pos = i;
+        }
+      }
+    }
+    Log("op_pos = %d, type is %c", op_pos, tokens[op_pos].type);
+    if (op_pos == -1 || cnt != 0) {
+      printf("A syntax error in expression.\n");
+      *success = false;
+      return 0;
+    }
+
+    word_t val1 = eval(p, op_pos - 1, success);
+    word_t val2 = eval(op_pos + 1, q, success);
+    Log("val1 = %u, val2 = %u", val1, val2);
+
+    word_t result = 0;
+    switch (tokens[op_pos].type) {
+      case '+': {
+        result = val1 + val2;
+        break;
+      }
+      case '-': {
+        result = val1 - val2;
+        break;
+      }
+      case '*': {
+        result = val1 * val2;
+        break;
+      }
+      case '/': {
+        result = val1 / val2;
+        break;
+      }
+      default: {
+        printf("Found unknown token type when evaluating expression.\n");
+        *success = false;
+        return 0;
+      }
+    }
+
+    if (result > BITMASK(32)) {
+      printf("Numeric constant too large.\n");
+      *success = false;
+      return 0;
+    }
+
+    *success = true;
+    return result;
+  }
+}
 
 word_t expr(char *e, bool *success) {
+  *success = false;
   if (!make_token(e)) {
-    *success = false;
     return 0;
   }
 
   /* TODO: Insert codes to evaluate the expression. */
-  printf("todo\n");
-
-  return 0;
+  word_t result = eval(0, nr_token - 1, success);
+  return result;
 }
