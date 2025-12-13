@@ -37,8 +37,8 @@ static struct rule {
    */
 
   {" +", TK_NOTYPE},    // spaces
-  {"0[xX][0-9a-fA-F]+", TK_HEX},
-  {"[0-9]+", TK_INT},
+  {"-?0[xX]{1}[0-9a-fA-F]+", TK_HEX},
+  {"-?[0-9]+", TK_INT},
   {"\\+", '+'},         // plus
   {"-", '-'},           // minus
   {"\\*", '*'},
@@ -207,10 +207,10 @@ word_t eval(const uint p, const uint q, bool *success) {
     uint cnt = 0;
     for (uint i = p; i <= q; i++) {
       Log("token[%d]: %s", i, tokens[i].str);
-      if (tokens[i].str[0] == '(') {
+      if (tokens[i].type == '(') {
         cnt++;
       }
-      if (tokens[i].str[0] == ')') {
+      if (tokens[i].type == ')') {
         cnt--;
       }
       if (cnt < 0) {
@@ -220,10 +220,10 @@ word_t eval(const uint p, const uint q, bool *success) {
       }
 
       if (cnt == 0) {
-        if (tokens[i].str[0] == '*' || tokens[i].str[0] == '/') {
+        if (tokens[i].type == '*' || tokens[i].type == '/') {
           op_pos = i;
         }
-        if (tokens[i].str[0] == '+' || tokens[i].str[0] == '-') {
+        if (tokens[i].type == '+' || tokens[i].type == '-') {
           op_pos = i;
         }
       }
