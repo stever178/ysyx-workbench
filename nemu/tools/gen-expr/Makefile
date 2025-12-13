@@ -15,4 +15,6 @@
 
 NAME = gen-expr
 SRCS = gen-expr.c
+CFLAGS = -g
+INC_PATH = $(NEMU_HOME)/include
 include $(NEMU_HOME)/scripts/build.mk

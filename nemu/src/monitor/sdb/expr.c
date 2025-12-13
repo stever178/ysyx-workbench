@@ -74,7 +74,7 @@ typedef struct token {
   char str[32];
 } Token;
 
-static Token tokens[32] __attribute__((used)) = {};
+static Token tokens[1024] __attribute__((used)) = {};
 static uint nr_token __attribute__((used))  = 0;
 
 static bool make_token(char *e) {
@@ -254,6 +254,11 @@ word_t eval(const uint p, const uint q, bool *success) {
         break;
       }
       case '/': {
+        if (val2 == 0) {
+          printf("Divide by zero.\n");
+          *success = false;
+          return 0;
+        }
         result = val1 / val2;
         break;
       }
