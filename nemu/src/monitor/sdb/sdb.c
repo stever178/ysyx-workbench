@@ -106,15 +106,9 @@ static int cmd_si(char *args) {
     }
   }
 
-  errno = 0;
-  char *end = NULL;
-  uint64_t num = strtoull(arg, &end, 10);
-  if (end == arg || *end != '\0') {
-    printf("Invalid number \"%s\".\n", arg);
-    return 0;
-  }
-  if (num == ULLONG_MAX && errno == ERANGE) {
-    printf("Numeric constant too large.\n");
+  bool success = false;
+  uint64_t num = str_to_num(arg, &success);
+  if (!success) {
     return 0;
   }
   
@@ -191,15 +185,9 @@ static int cmd_x(char *args) {
   }
 
   /* N */
-  errno = 0;
-  char *end = NULL;
-  uint64_t num = strtoull(n_str, &end, 10);
-  if (end == n_str || *end != '\0') {
-    printf("Invalid number \"%s\".\n", n_str);
-    return 0;
-  }
-  if (num == ULLONG_MAX && errno == ERANGE) {
-    printf("Numeric constant too large.\n");
+  bool success = false;
+  uint64_t num = str_to_num(n_str, &success);
+  if (!success) {
     return 0;
   }
 
@@ -223,10 +211,10 @@ static int cmd_x(char *args) {
     return 0;
   }
   
-  bool success = true;
-  Log("before expr(), expr_str is %s", expr_str);
+  success = false;
+  // Log("before expr(), expr_str is %s", expr_str);
   paddr_t base_addr = (paddr_t)expr(expr_str, &success);
-  Log("after expr(), addr is %" PRIu32 "", base_addr);
+  // Log("after expr(), addr is %" PRIu32 "", base_addr);
 
   if (!success) {
     printf("Bad expression \"%s\".\n", expr_str);

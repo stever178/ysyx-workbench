@@ -18,6 +18,7 @@
 
 #include <common.h>
 
+uint64_t str_to_num(char *nptr, bool *success);
 word_t expr(char *e, bool *success);
 
 #endif
