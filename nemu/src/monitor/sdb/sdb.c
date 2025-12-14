@@ -26,10 +26,11 @@ static char* delimiter = " ";
 void init_regex();
 void init_wp_pool();
 
+static char *line_read = NULL;
+static char line_history[65536] = {};
+
 /* We use the `readline` library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
-  static char *line_read = NULL;
-
   if (line_read) {
     free(line_read);
     line_read = NULL;
@@ -39,6 +40,7 @@ static char* rl_gets() {
 
   if (line_read && *line_read) {
     add_history(line_read);
+    strcpy(line_history, line_read);
   }
 
   return line_read;
@@ -49,24 +51,41 @@ static int cmd_c(char *args) {
   return 0;
 }
 
-static struct {
-  const char *name;
-  const char *description;
-  void (*handler) ();
-} info_subcmd_table [] = {
-  { "r", "Display registers", isa_reg_display },
-  { "w", "Display watchpoints", isa_watchpoint_display },
-  /* TODO: Add more subcommands */
-};
-
 #define NR_SUBCMD ARRLEN(info_subcmd_table)
 
+/* q */
 static int cmd_q(char *args) {
-  printf("Exit NEMU, return value is -1.\n");
-  nemu_state.state = NEMU_QUIT;
-  return -1;
+  bool flag_quit = true;
+
+  while (nemu_state.state == NEMU_RUNNING || nemu_state.state == NEMU_STOP) {
+    printf("A running session is active.\n");
+
+    if (line_read) {
+      free(line_read);
+      line_read = NULL;
+    }
+    line_read = readline("Quit anyway? (y or n) ");
+
+    if (*line_read == 'y') { 
+      break;
+    } else if (*line_read == 'n') {
+      flag_quit = false;
+      break;
+    } else {
+      printf("Please answer y or n.\n");
+    }
+  }
+
+  if (flag_quit) {
+    nemu_state.state = NEMU_QUIT;
+    printf("Exit NEMU.\n");
+    return -1;
+  } else {
+    return 0;
+  }
 }
 
+/* si [N] */
 static int cmd_si(char *args) {
   if (args == NULL) {
     cpu_exec(1);
@@ -116,16 +135,22 @@ static int cmd_si(char *args) {
   return 0;
 }
 
+static struct {
+  const char *name;
+  const char *description;
+  void (*handler) ();
+} info_subcmd_table [] = {
+  { "r", "Display registers", isa_reg_display },
+  { "w", "Display watchpoints", isa_watchpoint_display },
+  /* TODO: Add more subcommands */
+};
+
+/* info SUBCMD */
 static int cmd_info(char *args) {
   if (args == NULL) {
     printf("info command cannot be empty.\n");
     return 0;
   }
-
-  // if (strlen(args) > 15) {
-  //   printf("info command cannot be longer than 15 characters.\n");
-  //   return 0;
-  // }
   
   char *args_end = args + strlen(args);
 
@@ -158,9 +183,8 @@ static int cmd_info(char *args) {
   return 0;
 }
 
+/* x N EXPR */
 static int cmd_x(char *args) {
-  /* 	x N EXPR */
-
   if (args == NULL) {
     printf("x command cannot be empty.\n");
     return 0;
@@ -203,32 +227,72 @@ static int cmd_x(char *args) {
     return 0;
   }
 
-  while (expr_str < args_end && *expr_str == ' ') {
-    expr_str++;
-  }
-  if (expr_str >= args_end || *expr_str == '\0') {
-    printf("Expression is required for x command.\n");
-    return 0;
-  }
-  
   success = false;
-  // Log("before expr(), expr_str is %s", expr_str);
   paddr_t base_addr = (paddr_t)expr(expr_str, &success);
-  // Log("after expr(), addr is %" PRIu32 "", base_addr);
-
   if (!success) {
-    printf("Bad expression \"%s\".\n", expr_str);
     return 0;
   }
 
   /* print */
+  int byte_num = 4;
   for (uint64_t i = 0; i < num; i++) {
-    paddr_t cur_addr = base_addr + i * 4;
-    word_t data = paddr_read(cur_addr, 4);
+    paddr_t cur_addr = base_addr + i * byte_num;
+    word_t data = paddr_read(cur_addr, byte_num);
     printf("0x%08" PRIx32 ": 0x%08" PRIx32 "\n", cur_addr, data);
   }
 
   return 0;
+}
+
+static uint32_t cnt_p = 0;
+static char p_history_str[65536] = {};
+
+/* p EXPR */
+static int cmd_p(char *args) {
+  char *expr_str = NULL;
+
+  if (args == NULL) {
+    if (cnt_p == 0) {
+      printf("The history is empty.\n");
+      return 0;
+    } else {
+      expr_str = p_history_str;
+    }
+
+  } else {
+    expr_str = strtok(args, delimiter);
+    if (expr_str == NULL) {
+      if (cnt_p == 0) {
+        printf("The history is empty.\n");
+        return 0;
+      } else {
+        expr_str = p_history_str;
+      }
+    }
+  }
+
+  bool success = false;
+  word_t result = expr(expr_str, &success);
+  if (!success) {
+    return 0;
+  }
+  strcpy(p_history_str, expr_str);
+  cnt_p++;
+
+  /* print */
+  printf(ANSI_FMT("$%u", ANSI_FG_BLUE) " = %" PRIu32 "\n", cnt_p, result);
+
+  return 0;
+}
+
+/* w EXPR */
+static int cmd_w(char *args) {
+  TODO();
+}
+
+/* d N */
+static int cmd_d(char *args) {
+  TODO();
 }
 
 static int cmd_help(char *args);
@@ -244,6 +308,9 @@ static struct {
   { "si", "Step one instruction.", cmd_si },
   { "info", "Display information about the current state of the program.", cmd_info },
   { "x", "Scan memory.", cmd_x },
+  { "p", "Evaluate expression.", cmd_p },
+  { "w", "Set up monitoring points.", cmd_w },
+  { "d", "Delete monitoring points.", cmd_d },
   /* TODO: Add more commands */
 };
 
@@ -283,11 +350,16 @@ void sdb_mainloop() {
   }
 
   for (char *str; (str = rl_gets()) != NULL; ) {
+    if (*str == '\0') {
+      str = line_history;
+    }
     char *str_end = str + strlen(str);
 
     /* extract the first token as the command */
     char *cmd = strtok(str, delimiter);
-    if (cmd == NULL) { continue; }
+    if (cmd == NULL) {
+      continue;
+    }
 
     /* treat the remaining string as the arguments,
      * which may need further parsing
