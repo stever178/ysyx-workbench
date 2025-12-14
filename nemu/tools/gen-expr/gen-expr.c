@@ -57,11 +57,11 @@ static void gen_space(uint min, uint max) {
 }
 
 static void gen_num_dec(uint32_t rnd) {
-  buf_len += sprintf(buf + buf_len, "%u", rnd);
+  buf_len += sprintf(buf + buf_len, "%uU", rnd);
 }
 
 static void gen_num_hex(uint32_t rnd) {
-  buf_len += sprintf(buf + buf_len, "0x%x", rnd);
+  buf_len += sprintf(buf + buf_len, "0x%08xU", rnd);
 }
 
 static void gen_num(uint32_t min, uint32_t max) {
@@ -72,10 +72,10 @@ static void gen_num(uint32_t min, uint32_t max) {
   if (buf_len > 0) {
     switch (buf[buf_len - 1]) {
     case '*':
-      rnd = choose(0, BITMASK(6));
+      rnd = choose(0, BITMASK(7));
       break;
     case '/':
-      rnd = choose(1, BITMASK(6));
+      rnd = choose(1, BITMASK(7));
       break;
     default:
       break;
@@ -166,14 +166,14 @@ static void gen_rand_expr(uint8_t depth) {
     gen_num(0, BITMASK(32));
     gstate = ST_NUM;
     break;
-  case 2: 
+  case 2:
     gen_char('(');
     gstate = ST_LEFT_BRACKET;
     gen_rand_expr(depth + 1);
     gen_char(')');
     gstate = ST_RIGHT_BRACKET;
     break;
-  case 3: 
+  case 3:
     gen_rand_expr(depth + 1);
     gen_rand_op();
     gstate = ST_OP;
@@ -194,6 +194,9 @@ static void gen_expr() {
   gen_rand_expr(0);
 }
 
+/* usage:
+./build/gen-expr 10000 > input
+ */
 int main(int argc, char *argv[]) {
   int seed = time(0);
   srand(seed);
@@ -212,7 +215,8 @@ int main(int argc, char *argv[]) {
     fputs(code_buf, fp);
     fclose(fp);
 
-    int ret = system("gcc -Wno-overflow -Wdiv-by-zero /tmp/.code.c -o /tmp/.expr");
+    int ret =
+        system("gcc -Wno-overflow -Wdiv-by-zero /tmp/.code.c -o /tmp/.expr");
     if (ret != 0)
       continue;
 
