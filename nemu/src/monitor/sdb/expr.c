@@ -15,6 +15,7 @@
 
 #include <isa.h>
 #include <memory/paddr.h>
+#include "sdb.h"
 
 /* We use the POSIX regex functions to process regular expressions.
  * Type 'man regex' for more information about POSIX regex functions.
@@ -24,7 +25,6 @@
 enum {
   TK_NOTYPE = 256,
   TK_REG, TK_HEX, TK_INT,
-  TK_L_PAREN, TK_R_PAREN,
   
   TK_OR,                      // 1. ||
   TK_AND,                     // 2. &&
@@ -36,7 +36,8 @@ enum {
   TK_SHL, TK_SHR,             // 8. <<, >>
   TK_ADD, TK_SUB,             // 9. +, - (binary)
   TK_MUL, TK_DIV, TK_MOD,     // 10. *, /, %
-  TK_NOT, TK_DEREF,           // 11. ! * (unary)
+  TK_DEREF, TK_BITNOT, TK_NOT,           // 11. ! * (unary)
+  TK_L_PAREN, TK_R_PAREN,
 };
 
 static struct rule {
@@ -50,11 +51,8 @@ static struct rule {
   {" +", TK_NOTYPE}, // spaces
   
   {"\\$[a-zA-Z0-9_]*\\b", TK_REG},
-  {"-?0[xX]{1}[0-9a-fA-F]+[uU]?", TK_HEX},
-  {"-?[0-9]+[uU]?", TK_INT},
-
-  {"\\(", TK_L_PAREN},
-  {"\\)", TK_R_PAREN},
+  {"[-+]?0[xX]{1}[0-9a-fA-F]+[uU]?", TK_HEX},
+  {"[-+]?[0-9]+[uU]?", TK_INT},
 
   /* 按照优先级从低到高匹配运算符 */
   {"\\|\\|", TK_OR}, // 1. ||
@@ -62,18 +60,19 @@ static struct rule {
 
   {"\\|", TK_BITOR}, // 3. |
   {"\\^", TK_XOR},   // 4. ^
-  {"&", TK_BITAND}, // 5. &
+  {"&", TK_BITAND},  // 5. &
 
-  {"==", TK_EQ},    // 6. ==
+  {"==", TK_EQ},     // 6. ==
   {"!=", TK_NE},    // 6. !=
 
   {"<=", TK_LE},    // 7. <=
   {">=", TK_GE},    // 7. >=
-  {"<", TK_LT},     // 7. <
-  {">", TK_GT},     // 7. >
-
+  
   {"<<", TK_SHL},   // 8. <<
   {">>", TK_SHR},   // 8. >>
+
+  {"<", TK_LT},     // 7. <
+  {">", TK_GT},     // 7. >
 
   {"\\+", TK_ADD},  // 9. +
   {"-", TK_SUB},    // 9. -
@@ -82,7 +81,11 @@ static struct rule {
   {"/", TK_DIV},    // 10. /
   {"%", TK_MOD},    // 10. %
 
+  {"~", TK_BITNOT}, // 11. ~
   {"!", TK_NOT},    // 11. !
+
+  {"\\(", TK_L_PAREN},
+  {"\\)", TK_R_PAREN},
 };
 
 #define NR_REGEX ARRLEN(rules)
@@ -141,8 +144,9 @@ int get_operator_priority(int type) {
     return 10;
 
   // 优先级11 - 一元运算符
-  case TK_NOT:   // 逻辑非
-  case TK_DEREF: // 解引用
+  case TK_DEREF:  // 解引用
+  case TK_BITNOT: // 按位取反
+  case TK_NOT:    // 逻辑非
     return 11;
 
   default:
@@ -181,7 +185,7 @@ typedef struct token {
   char str[32];
 } Token;
 
-static Token tokens[65536] __attribute__((used)) = {};
+static Token tokens[MAX_TOKEN_NUM] __attribute__((used)) = {};
 static uint nr_token __attribute__((used)) = 0;
 
 static bool make_token(char *e) {
@@ -199,8 +203,8 @@ static bool make_token(char *e) {
         char *substr_start = e + position;
         int substr_len = pmatch.rm_eo;
 
-        Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i,
-            rules[i].regex, position, substr_len, substr_len, substr_start);
+        // Log("match rules[%d] = \"%s\" at position %d with len %d: %.*s", i,
+        //     rules[i].regex, position, substr_len, substr_len, substr_start);
 
         position += substr_len;
 
@@ -235,7 +239,12 @@ static bool make_token(char *e) {
         case TK_MUL:
         case TK_DIV:
         case TK_MOD:
+        case TK_BITNOT:
         case TK_NOT:
+          if (nr_token == MAX_TOKEN_NUM - 1) {
+            printf("The expression is too long.\n");
+            return false;
+          }
           tokens[nr_token].type = rules[i].token_type;
 
           for (int j = 0; j < substr_len; j++) {
@@ -360,13 +369,15 @@ word_t eval(const uint p, const uint q, bool *success) {
   } else if (p + 1 == q) {
     /* <unary-op> <expr> */
     switch (tokens[p].type) {
-    case TK_NOT:
-      return !eval(p + 1, q, success);
     case TK_DEREF: {
       paddr_t cur_addr = (paddr_t)str_to_num(tokens[p + 1].str, success);
       word_t data = paddr_read(cur_addr, 4);
       return data;
     }
+    case TK_BITNOT:
+      return ~eval(p + 1, q, success);
+    case TK_NOT:
+      return !eval(p + 1, q, success);
     default:
       printf("Unknown unary operator: %s\n", tokens[p].str);
       *success = false;
@@ -378,12 +389,13 @@ word_t eval(const uint p, const uint q, bool *success) {
      */
     return eval(p + 1, q - 1, success);
   } else {
-    /* 寻找主运算符 */
+    /* binary op */
     uint op_pos = -1;
 
+    /* 寻找主运算符 */
     int cnt_brackets = 0;
     for (uint i = p; i <= q; i++) {
-      Log("token[%u]: %s", i, tokens[i].str);
+      // Log("token[%u]: %s", i, tokens[i].str);
 
       if (tokens[i].type == TK_L_PAREN) {
         cnt_brackets++;
@@ -417,16 +429,15 @@ word_t eval(const uint p, const uint q, bool *success) {
       *success = false;
       return 0;
     }
-    Log("        op_pos = %u, os_type is %c", op_pos, tokens[op_pos].type);
 
-    /* binary op */
     word_t val1 = eval(p, op_pos - 1, success);
     word_t val2 = eval(op_pos + 1, q, success);
-    Log("  val1 = 0x%x, os_type is %c, val2 = 0x%x", val1, tokens[op_pos].type,
-        val2);
-
     word_t result = 0;
-    switch (tokens[op_pos].type) {
+
+    int op_type = tokens[op_pos].type;
+    Log("0x%x %s 0x%x", val1, tokens[op_pos].str, val2);
+
+    switch (op_type) {
     case TK_OR:
       result = val1 || val2;
       break;
@@ -461,10 +472,18 @@ word_t eval(const uint p, const uint q, bool *success) {
       result = val1 > val2;
       break;
     case TK_SHL:
-      result = val1 << val2;
+      if (val2 >= 32) {
+        result = 0;
+      } else {
+        result = val1 << val2;
+      }
       break;
     case TK_SHR:
-      result = val1 >> val2;
+      if (val2 >= 32) {
+        result = 0;
+      } else {
+        result = val1 >> val2;
+      }
       break;
     case TK_ADD:
       result = val1 + val2;
@@ -477,7 +496,7 @@ word_t eval(const uint p, const uint q, bool *success) {
       break;
     case TK_DIV:
       if (val2 == 0) {
-        printf("Divide by zero.\n");
+        printf("Division by zero [/].\n");
         *success = false;
         return 0;
       }
@@ -485,7 +504,7 @@ word_t eval(const uint p, const uint q, bool *success) {
       break;
     case TK_MOD:
       if (val2 == 0) {
-        printf("Divide by zero.\n");
+        printf("Division by zero [%%].\n");
         *success = false;
         return 0;
       }

@@ -20,13 +20,13 @@
 typedef struct watchpoint {
   int NO;
   struct watchpoint *next;
-
+  char expr_str[65536];
   /* TODO: Add more members if necessary */
-
 } WP;
 
 static WP wp_pool[NR_WP] = {};
 static WP *head = NULL, *free_ = NULL;
+static uint wp_num = 0;
 
 void init_wp_pool() {
   int i;
@@ -37,6 +37,7 @@ void init_wp_pool() {
 
   head = NULL;
   free_ = wp_pool;
+  wp_num = 0;
 }
 
 /* TODO: Implement the functionality of watchpoint */

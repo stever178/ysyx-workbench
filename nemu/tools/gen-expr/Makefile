@@ -17,4 +17,11 @@ NAME = gen-expr
 SRCS = gen-expr.c
 CFLAGS = -g
 INC_PATH = $(NEMU_HOME)/include
+BUILD_DIR = $(WORK_DIR)/build
+
 include $(NEMU_HOME)/scripts/build.mk
+
+gen-task: $(BUILD_DIR)/$(NAME)
+	@$(BUILD_DIR)/$(NAME) 10000 > $(WORK_DIR)/input_v3
+
+.PHONY: gen-task

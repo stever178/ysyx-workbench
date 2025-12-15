@@ -61,33 +61,30 @@ static void gen_num_dec(uint32_t rnd) {
 }
 
 static void gen_num_hex(uint32_t rnd) {
-  buf_len += sprintf(buf + buf_len, "0x%08xU", rnd);
+  buf_len += sprintf(buf + buf_len, "0x%xU", rnd);
 }
 
 static void gen_num(uint32_t min, uint32_t max) {
   gen_space(1, 2);
 
-  uint32_t rnd = choose(min, max);
-
-  if (buf_len > 0) {
-    switch (buf[buf_len - 1]) {
-    case '*':
-      rnd = choose(0, BITMASK(7));
-      break;
-    case '/':
-      rnd = choose(1, BITMASK(7));
-      break;
-    default:
-      break;
-    }
+  uint32_t rnd = 0;
+  switch (choose(0, 1)) {
+  case 0:
+    rnd = choose(min, max);
+    break;
+  default:
+    rnd = choose(0, 32);
+    break;
   }
+  gen_num_hex(rnd);
+  return;
 
   switch (choose(0, 1)) {
   case 0:
-    gen_num_dec(rnd);
+    gen_num_hex(rnd);
     break;
   case 1:
-    gen_num_hex(rnd);
+    gen_num_dec(rnd);
     break;
   }
 }
@@ -97,20 +94,76 @@ static void gen_char(char c) {
   buf_len += sprintf(buf + buf_len, "%c", c);
 }
 
-static void gen_rand_op() {
-  gen_space(1, 2);
-  switch (choose(0, 3)) {
+static void gen_binary_op() {
+  gen_space(0, 2);
+  switch (choose(0, 9)) {
+  case 0: // 逻辑或
+    buf_len += sprintf(buf + buf_len, "||");
+    break;
+  case 1: // 逻辑与
+    buf_len += sprintf(buf + buf_len, "&&");
+    break;
+  case 2: // 按位或
+    buf_len += sprintf(buf + buf_len, "|");
+    break;
+  case 3: // 按位异或
+    buf_len += sprintf(buf + buf_len, "^");
+    break;
+  case 4: // 按位与
+    buf_len += sprintf(buf + buf_len, "&");
+    break;
+  case 5: // 等于、不等于
+    buf_len += sprintf(buf + buf_len, choose(0, 1) ? "==" : "!=");
+    break;
+  case 6: // 比较运算符
+    switch (choose(0, 3)) {
+    case 0:
+      buf_len += sprintf(buf + buf_len, "<=");
+      break;
+    case 1:
+      buf_len += sprintf(buf + buf_len, ">=");
+      break;
+    case 2:
+      buf_len += sprintf(buf + buf_len, "<");
+      break;
+    case 3:
+      buf_len += sprintf(buf + buf_len, ">");
+      break;
+    }
+    break;
+  case 7: // 移位运算符
+    buf_len += sprintf(buf + buf_len, choose(0, 1) ? "<<" : ">>");
+    break;
+  case 8: // 加减运算符
+    buf_len += sprintf(buf + buf_len, choose(0, 1) ? "+" : "-");
+    break;
+  case 9: // 乘除模运算符
+    switch (choose(0, 2)) {
+    case 0:
+      buf_len += sprintf(buf + buf_len, "*");
+      break;
+    case 1:
+      buf_len += sprintf(buf + buf_len, "/");
+      break;
+    case 2:
+      buf_len += sprintf(buf + buf_len, "%%");
+      break;
+    }
+    break;
+  }
+}
+
+static void gen_unary_op() {
+  switch (choose(0, 2)) {
   case 0:
-    buf_len += sprintf(buf + buf_len, "+");
     break;
   case 1:
-    buf_len += sprintf(buf + buf_len, "-");
+    gen_space(0, 1);
+    buf_len += sprintf(buf + buf_len, "~");
     break;
   case 2:
-    buf_len += sprintf(buf + buf_len, "*");
-    break;
-  case 3:
-    buf_len += sprintf(buf + buf_len, "/");
+    gen_space(0, 1);
+    buf_len += sprintf(buf + buf_len, "!");
     break;
   }
 }
@@ -118,10 +171,26 @@ static void gen_rand_op() {
 /* Considering BNF definition:
 <expr> ::= <number>
   | "(" <expr> ")"
-  | <expr> "+" <expr>
-  | <expr> "-" <expr>
+  | "~" <expr>
+  | "!" <expr>
   | <expr> "*" <expr>
   | <expr> "/" <expr>
+  | <expr> "%" <expr>
+  | <expr> "+" <expr>
+  | <expr> "-" <expr>
+  | <expr> "<<" <expr>
+  | <expr> ">>" <expr>
+  | <expr> "<" <expr>
+  | <expr> ">" <expr>
+  | <expr> "<=" <expr>
+  | <expr> ">=" <expr>
+  | <expr> "==" <expr>
+  | <expr> "!=" <expr>
+  | <expr> "&" <expr>
+  | <expr> "^" <expr>
+  | <expr> "|" <expr>
+  | <expr> "&&" <expr>
+  | <expr> "||" <expr>
 */
 enum {
   ST_IDLE = 0,
@@ -163,6 +232,7 @@ static void gen_rand_expr(uint8_t depth) {
     printf("[depth:%2d] choice 0\n", depth);
     return;
   case 1:
+    gen_unary_op();
     gen_num(0, BITMASK(32));
     gstate = ST_NUM;
     break;
@@ -175,7 +245,7 @@ static void gen_rand_expr(uint8_t depth) {
     break;
   case 3:
     gen_rand_expr(depth + 1);
-    gen_rand_op();
+    gen_binary_op();
     gstate = ST_OP;
     gen_rand_expr(depth + 1);
     gstate = ST_STOP;
@@ -195,7 +265,7 @@ static void gen_expr() {
 }
 
 /* usage:
-./build/gen-expr 10000 > input
+ * ./build/gen-expr 10000 > input
  */
 int main(int argc, char *argv[]) {
   int seed = time(0);
@@ -204,23 +274,50 @@ int main(int argc, char *argv[]) {
   if (argc > 1) {
     sscanf(argv[1], "%u", &loop);
   }
+
+  int ret = 0;
+  char command[1024] = {0};
+  char str_code_dir[128] = "/tmp/codes";
+  char str_bin_dir[128] = "/tmp/bins";
+
+  snprintf(command, sizeof(command), "rm -rf %s %s", str_code_dir, str_bin_dir);
+  ret = system(command);
+
+  snprintf(command, sizeof(command), "mkdir -p %s %s", str_code_dir,
+           str_bin_dir);
+  ret = system(command);
+  if (ret != 0) {
+    printf("mkdir failed");
+    exit(-1);
+  }
+
   int i;
   for (i = 0; i < loop; i++) {
     gen_expr();
 
     sprintf(code_buf, code_format, buf);
 
-    FILE *fp = fopen("/tmp/.code.c", "w");
+    char str_cfile[128] = {0};
+    char str_bin[128] = {0};
+    snprintf(str_cfile, sizeof(str_cfile), "%s/%d.code.c", str_code_dir, i);
+    snprintf(str_bin, sizeof(str_bin), "%s/%d.expr", str_bin_dir, i);
+
+    FILE *fp = fopen(str_cfile, "w");
     assert(fp != NULL);
     fputs(code_buf, fp);
     fclose(fp);
 
-    int ret =
-        system("gcc -Wno-overflow -Wdiv-by-zero /tmp/.code.c -o /tmp/.expr");
-    if (ret != 0)
+    snprintf(command, sizeof(command),
+             "gcc -O0 -fsanitize=shift "
+             "-Werror=div-by-zero -Werror=shift-count-overflow "
+             "\"%s\" -o \"%s\" 2>/dev/null\n",
+             str_cfile, str_bin);
+    ret = system(command);
+    if (ret != 0) {
       continue;
+    }
 
-    fp = popen("/tmp/.expr", "r");
+    fp = popen(str_bin, "r");
     assert(fp != NULL);
 
     uint32_t result;
@@ -236,5 +333,9 @@ int main(int argc, char *argv[]) {
 
     printf("0x%08x %s\n", result, buf);
   }
+
+  snprintf(command, sizeof(command), "rm -rf %s %s", str_code_dir, str_bin_dir);
+  ret = system(command);
+
   return 0;
 }

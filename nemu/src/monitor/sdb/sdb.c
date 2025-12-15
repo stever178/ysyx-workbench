@@ -27,7 +27,7 @@ void init_regex();
 void init_wp_pool();
 
 static char *line_read = NULL;
-static char line_history[65536] = {};
+static char line_history[MAX_TOKEN_NUM] = {};
 
 /* We use the `readline` library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -39,8 +39,12 @@ static char* rl_gets() {
   line_read = readline("(nemu) ");
 
   if (line_read && *line_read) {
-    add_history(line_read);
+    if (strlen(line_read) > MAX_TOKEN_NUM - 1) {
+      printf("The expression is too long.\n");
+      return NULL;
+    }
     strcpy(line_history, line_read);
+    add_history(line_read);
   }
 
   return line_read;
@@ -245,7 +249,7 @@ static int cmd_x(char *args) {
 }
 
 static uint32_t cnt_p = 0;
-static char p_history_str[65536] = {};
+static char p_history_str[MAX_TOKEN_NUM] = {};
 
 /* p EXPR */
 static int cmd_p(char *args) {
@@ -260,7 +264,11 @@ static int cmd_p(char *args) {
     }
 
   } else {
-    expr_str = strtok(args, delimiter);
+    if (strlen(args) > MAX_TOKEN_NUM - 1) {
+      printf("The expression is too long.\n");
+      return 0;
+    }
+    expr_str = args;
     if (expr_str == NULL) {
       if (cnt_p == 0) {
         printf("The history is empty.\n");
