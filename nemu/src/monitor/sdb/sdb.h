@@ -18,6 +18,8 @@
 
 #include <common.h>
 
+#define MAX_TOKEN_NUM 65536
+
 uint64_t str_to_num(char *nptr, bool *success);
 word_t expr(char *e, bool *success);
 
