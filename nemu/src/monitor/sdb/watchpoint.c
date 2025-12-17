@@ -186,6 +186,7 @@ void scan_all_wp(bool *stop) {
       continue;
     }
     if (item->old_value != cur_value) {
+      item->old_value = cur_value;
       *stop = true;
       break;
     }

@@ -35,7 +35,7 @@ static char* rl_gets() {
     line_read = NULL;
   }
 
-  line_read = readline("(nemu) ");
+  line_read = readline(ANSI_FMT("(nemu) ", ANSI_FG_GREEN));
 
   if (line_read && *line_read) {
     if (strlen(line_read) > MAX_TOKEN_NUM) {
