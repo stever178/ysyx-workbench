@@ -23,4 +23,32 @@
 uint64_t str_to_num(char *nptr, bool *success);
 word_t expr(char *e, bool *success);
 
+#define NR_WP 32
+
+typedef uint32_t CNT_TYPE;
+
+typedef struct watchpoint {
+  CNT_TYPE NO;
+  struct watchpoint *next;
+  
+  // int type;
+  bool enable;
+  char expr_str[MAX_TOKEN_NUM];
+  word_t old_value;
+
+  /* TODO: Add more members if necessary */
+} WP;
+
+void init_wp_pool();
+
+WP* new_wp();
+void free_wp(WP *wp);
+void free_all_wp();
+void free_wp_by_num(uint32_t num);
+
+WP *find_wp(uint32_t num);
+void display_wp();
+
+void scan_wp(bool *stop);
+
 #endif

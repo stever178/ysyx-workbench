@@ -51,8 +51,8 @@ static struct rule {
   {" +", TK_NOTYPE}, // spaces
   
   {"\\$[a-zA-Z0-9_]*\\b", TK_REG},
-  {"[-+]?0[xX]{1}[0-9a-fA-F]+[uU]?", TK_HEX},
-  {"[-+]?[0-9]+[uU]?", TK_INT},
+  {"[-]?0[xX]{1}[0-9a-fA-F]+[uU]?", TK_HEX},
+  {"[-]?[0-9]+[uU]?", TK_INT},
 
   /* 按照优先级从低到高匹配运算符 */
   {"\\|\\|", TK_OR}, // 1. ||
