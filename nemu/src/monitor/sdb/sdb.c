@@ -24,10 +24,9 @@ static int is_batch_mode = false;
 static char* delimiter = " ";
 
 void init_regex();
-void init_wp_pool();
 
 static char *line_read = NULL;
-static char line_history[MAX_TOKEN_NUM] = {};
+static char line_history[MAX_TOKEN_NUM + 1] = {0};
 
 /* We use the `readline` library to provide more flexibility to read from stdin. */
 static char* rl_gets() {
@@ -39,7 +38,7 @@ static char* rl_gets() {
   line_read = readline("(nemu) ");
 
   if (line_read && *line_read) {
-    if (strlen(line_read) > MAX_TOKEN_NUM - 1) {
+    if (strlen(line_read) > MAX_TOKEN_NUM) {
       printf("The expression is too long.\n");
       return NULL;
     }
@@ -95,11 +94,6 @@ static int cmd_si(char *args) {
     cpu_exec(1);
     return 0;
   }
-
-  // if (strlen(args) > 15) {
-  //   printf("si command cannot be longer than 15 characters.\n");
-  //   return 0;
-  // }
 
   char *args_end = args + strlen(args);
 
@@ -190,7 +184,7 @@ static int cmd_info(char *args) {
 /* x N EXPR */
 static int cmd_x(char *args) {
   if (args == NULL) {
-    printf("x command cannot be empty.\n");
+    printf("Argument required (starting display address).\n");
     return 0;
   }
 
@@ -199,7 +193,7 @@ static int cmd_x(char *args) {
   /* split */
   char *n_str = strtok(args, delimiter);
   if (n_str == NULL) {
-    printf("x command cannot be empty.\n");
+    printf("Argument required (starting display address).\n");
     return 0;
   }
 
@@ -249,7 +243,7 @@ static int cmd_x(char *args) {
 }
 
 static uint32_t cnt_p = 0;
-static char p_history_str[MAX_TOKEN_NUM] = {};
+static char p_history_str[MAX_TOKEN_NUM + 1] = {};
 
 /* p EXPR */
 static int cmd_p(char *args) {
@@ -264,7 +258,7 @@ static int cmd_p(char *args) {
     }
 
   } else {
-    if (strlen(args) > MAX_TOKEN_NUM - 1) {
+    if (strlen(args) > MAX_TOKEN_NUM) {
       printf("The expression is too long.\n");
       return 0;
     }
@@ -287,20 +281,89 @@ static int cmd_p(char *args) {
   strcpy(p_history_str, expr_str);
   cnt_p++;
 
-  /* print */
   printf(ANSI_FMT("$%u", ANSI_FG_BLUE) " = %" PRIu32 "\n", cnt_p, result);
 
   return 0;
 }
 
+// static uint32_t cnt_w = 0;
+
 /* w EXPR */
 static int cmd_w(char *args) {
-  TODO();
+  char *expr_str = NULL;
+
+  if (args == NULL) {
+    printf("Argument required (expression to compute).\n");
+    return 0;
+  } else {
+    if (strlen(args) > MAX_TOKEN_NUM) {
+      printf("The expression is too long.\n");
+      return 0;
+    }
+    expr_str = args;
+  }
+
+  bool success = false;
+  word_t result = expr(expr_str, &success);
+  if (!success) {
+    return 0;
+  }
+
+  // cnt_w++;
+  // if (cnt_w == NR_WP) {
+  //   printf("The watchpoint pool is full.\n");
+  //   cnt_w--;
+  //   return 0;
+  // }
+
+  WP *wp = new_wp();
+  if (wp == NULL) {
+    return 0;
+  }
+
+  strcpy(wp->expr_str, expr_str);
+  wp->old_value = result;
+
+  printf("Hardware watchpoint %u: %s\n", wp->NO, expr_str);
+
+  return 0;
 }
 
 /* d N */
 static int cmd_d(char *args) {
-  TODO();
+  while (args == NULL) {
+    if (line_read) {
+      free(line_read);
+      line_read = NULL;
+    }
+    line_read = readline("Delete all breakpoints, watchpoints, tracepoints, "
+                         "and catchpoints? (y or n) \n");
+
+    if (*line_read == 'y') {
+      free_all_wp();
+      return 0;
+    } else if (*line_read == 'n') {
+      break;
+    } else {
+      printf("Please answer y or n.\n");
+    }
+  }
+
+  if (strlen(args) > MAX_TOKEN_NUM) {
+    printf("The expression is too long.\n");
+    return 0;
+  }
+
+  char *num_str = args;
+  bool success = false;
+  word_t num = expr(num_str, &success);
+  if (!success) {
+    return 0;
+  }
+
+  free_wp_by_num(num);
+
+  return 0;
 }
 
 static int cmd_help(char *args);
@@ -357,9 +420,11 @@ void sdb_mainloop() {
     return;
   }
 
-  for (char *str; (str = rl_gets()) != NULL; ) {
+  char str_bak[MAX_TOKEN_NUM + 1] = {0};
+  for (char *str; (str = rl_gets()) != NULL;) {
     if (*str == '\0') {
-      str = line_history;
+      strcpy(str_bak, line_history);
+      str = str_bak;
     }
     char *str_end = str + strlen(str);
 
