@@ -286,8 +286,6 @@ static int cmd_p(char *args) {
   return 0;
 }
 
-// static uint32_t cnt_w = 0;
-
 /* w EXPR */
 static int cmd_w(char *args) {
   char *expr_str = NULL;
@@ -308,13 +306,6 @@ static int cmd_w(char *args) {
   if (!success) {
     return 0;
   }
-
-  // cnt_w++;
-  // if (cnt_w == NR_WP) {
-  //   printf("The watchpoint pool is full.\n");
-  //   cnt_w--;
-  //   return 0;
-  // }
 
   WP *wp = new_wp();
   if (wp == NULL) {

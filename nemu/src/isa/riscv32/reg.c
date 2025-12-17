@@ -16,7 +16,7 @@
 #include <isa.h>
 #include "local-include/reg.h"
 
-void display_wp();
+void display_all_wp();
 
 const char *regs[] = {
   "$0", "ra", "sp", "gp", "tp", "t0", "t1", "t2",
@@ -34,7 +34,7 @@ void isa_reg_display() {
 }
 
 void isa_watchpoint_display() {
-  display_wp();
+  display_all_wp();
 }
 
 word_t isa_reg_str2val(const char *s, bool *success) {

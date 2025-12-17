@@ -168,7 +168,7 @@ WP *find_wp(uint32_t num) {
   return result;
 }
 
-void display_wp() {
+void display_all_wp() {
   printf("Num     Type           Disp Enb Address            What\n");
   for (WP *item = used_head; item != NULL; item = item->next) {
     printf("%3u     hw watchpoint  keep %-c   Address            %s\n",
@@ -176,7 +176,7 @@ void display_wp() {
   }
 }
 
-void scan_wp(bool *stop) {
+void scan_all_wp(bool *stop) {
   *stop = false;
   for (WP* item = used_head; item; item = item->next) {
     bool success;

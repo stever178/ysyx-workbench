@@ -47,8 +47,9 @@ void free_all_wp();
 void free_wp_by_num(uint32_t num);
 
 WP *find_wp(uint32_t num);
-void display_wp();
 
-void scan_wp(bool *stop);
+void display_all_wp();
+
+void scan_all_wp(bool *stop);
 
 #endif
