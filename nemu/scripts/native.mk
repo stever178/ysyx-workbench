@@ -47,4 +47,8 @@ $(clean-tools):
 clean-tools: $(clean-tools)
 clean-all: clean distclean clean-tools
 
-.PHONY: run gdb run-env clean-tools clean-all $(clean-tools)
+count:
+	@echo "Counting lines of code..."
+	cloc --include-lang="C,C/C++ Header" .
+
+.PHONY: run gdb run-env clean-tools clean-all $(clean-tools) count
