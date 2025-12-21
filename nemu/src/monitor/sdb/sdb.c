@@ -236,7 +236,7 @@ static int cmd_x(char *args) {
   for (uint64_t i = 0; i < num; i++) {
     paddr_t cur_addr = base_addr + i * byte_num;
     word_t data = paddr_read(cur_addr, byte_num);
-    printf("0x%08" PRIx32 ": 0x%08" PRIx32 "\n", cur_addr, data);
+    printf(FMT_WORD ": " FMT_WORD "\n", cur_addr, data);
   }
 
   return 0;

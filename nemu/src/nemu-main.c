@@ -24,7 +24,7 @@ word_t expr(char *, bool *);
 
 int main(int argc, char *argv[]) {
   int test_pos = 2;
-  if (argc > test_pos) {
+  if (argc > test_pos && strcmp(argv[test_pos], "-t") == 0) {
     FILE *fp = fopen(argv[test_pos], "r");
     assert(fp != NULL);
     
