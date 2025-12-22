@@ -26,17 +26,17 @@ enum {
   TK_NOTYPE = 256,
   TK_REG, TK_HEX, TK_INT,
   
-  TK_OR,                      // 1. ||
-  TK_AND,                     // 2. &&
-  TK_BITOR,                   // 3. |
-  TK_XOR,                     // 4. ^
-  TK_BITAND,                  // 5. &
-  TK_EQ, TK_NE,               // 6. ==, !=
-  TK_LE, TK_GE, TK_LT, TK_GT, // 7. <=, >=, <, >
-  TK_SHL, TK_SHR,             // 8. <<, >>
-  TK_ADD, TK_SUB,             // 9. +, - (binary)
-  TK_MUL, TK_DIV, TK_MOD,     // 10. *, /, %
-  TK_DEREF, TK_BITNOT, TK_NOT,           // 11. ! * (unary)
+  TK_OR,                                       // 1. ||
+  TK_AND,                                      // 2. &&
+  TK_BITOR,                                    // 3. |
+  TK_XOR,                                      // 4. ^
+  TK_BITAND,                                   // 5. &
+  TK_EQ, TK_NE,                                // 6. ==, !=
+  TK_LE, TK_GE, TK_LT, TK_GT,                  // 7. <=, >=, <, >
+  TK_SHL, TK_SHR,                              // 8. <<, >>
+  TK_ADD, TK_SUB,                              // 9. +, -
+  TK_MUL, TK_DIV, TK_MOD,                      // 10. *, /, %
+  TK_DEREF, TK_POS, TK_NEG, TK_BITNOT, TK_NOT, // 11. * + - ~ !
   TK_L_PAREN, TK_R_PAREN,
 };
 
@@ -51,8 +51,8 @@ static struct rule {
   {" +", TK_NOTYPE}, // spaces
   
   {"\\$[a-zA-Z0-9_]*\\b", TK_REG},
-  {"[-]?0[xX]{1}[0-9a-fA-F]+[uU]?", TK_HEX},
-  {"[-]?[0-9]+[uU]?", TK_INT},
+  {"0[xX]{1}[0-9a-fA-F]+[uU]?", TK_HEX},
+  {"[0-9]+[uU]?", TK_INT},
 
   /* 按照优先级从低到高匹配运算符 */
   {"\\|\\|", TK_OR}, // 1. ||
@@ -145,6 +145,8 @@ int get_operator_priority(int type) {
 
   // 优先级11 - 一元运算符
   case TK_DEREF:  // 解引用
+  case TK_POS:
+  case TK_NEG:
   case TK_BITNOT: // 按位取反
   case TK_NOT:    // 逻辑非
     return 11;
@@ -160,6 +162,15 @@ bool is_binary_op(const int op) {
          op == TK_GE || op == TK_LT || op == TK_GT || op == TK_SHL ||
          op == TK_SHR || op == TK_ADD || op == TK_SUB || op == TK_MUL ||
          op == TK_DIV || op == TK_MOD;
+}
+
+bool is_unary_op(const int op) {
+  return op == TK_DEREF || op == TK_POS || op == TK_NEG || op == TK_BITNOT ||
+         op == TK_NOT;
+}
+
+bool is_op (const int op) {
+  return is_binary_op(op) || is_unary_op(op);
 }
 
 /* Rules are used for many times.
@@ -269,18 +280,25 @@ static bool make_token(char *e) {
   }
 
   for (i = 0; i < nr_token; i++) {
-    if (tokens[i].type == TK_MUL) {
-      if (i == 0) {
-        tokens[i].type = TK_DEREF;
-      } else {
-        int prev_type = tokens[i - 1].type;
-        bool is_mul = prev_type == TK_REG || prev_type == TK_HEX ||
-                      prev_type == TK_INT || prev_type == TK_R_PAREN;
-        if (is_mul == false) {
-          tokens[i].type = TK_DEREF;
-        }
-      }
-    }
+#define handle_unary(binary_type, unary_type)                                  \
+  {                                                                            \
+    if (tokens[i].type == binary_type) {                                       \
+      if (i == 0) {                                                            \
+        tokens[i].type = unary_type;                                           \
+      } else {                                                                 \
+        int prev_type = tokens[i - 1].type;                                    \
+        bool is_binary = prev_type == TK_REG || prev_type == TK_HEX ||         \
+                         prev_type == TK_INT || prev_type == TK_R_PAREN;       \
+        if (is_binary == false) {                                              \
+          tokens[i].type = unary_type;                                         \
+        }                                                                      \
+      }                                                                        \
+    }                                                                          \
+  }
+
+    handle_unary(TK_MUL, TK_DEREF);
+    handle_unary(TK_ADD, TK_POS);
+    handle_unary(TK_SUB, TK_NEG);
   }
 
   return true;
@@ -349,6 +367,9 @@ word_t eval(const uint p, const uint q, bool *success) {
       if (strcmp(tokens[p].str, "$0") == 0) {
         *success = true;
         num = 0;
+      } else if (strcmp(tokens[p].str, "$pc") == 0) {
+        *success = true;
+        num = cpu.pc;
       } else {
         num = isa_reg_str2val(tokens[p].str + 1, success);
       }
@@ -366,33 +387,15 @@ word_t eval(const uint p, const uint q, bool *success) {
       return 0;
     }
     return (word_t)num;
-  } else if (p + 1 == q) {
-    /* <unary-op> <expr> */
-    switch (tokens[p].type) {
-    case TK_DEREF: {
-      paddr_t cur_addr = (paddr_t)str_to_num(tokens[p + 1].str, success);
-      word_t data = paddr_read(cur_addr, 4);
-      return data;
-    }
-    case TK_BITNOT:
-      return ~eval(p + 1, q, success);
-    case TK_NOT:
-      return !eval(p + 1, q, success);
-    default:
-      printf("Unknown unary operator: %s\n", tokens[p].str);
-      *success = false;
-      return 0;
-    }
   } else if (check_parentheses(p, q)) {
     /* The expression is surrounded by a matched pair of parentheses.
      * If that is the case, just throw away the parentheses.
      */
     return eval(p + 1, q - 1, success);
   } else {
-    /* binary op */
+    /* 寻找主运算符 */
     uint op_pos = -1;
 
-    /* 寻找主运算符 */
     int cnt_brackets = 0;
     for (uint i = p; i <= q; i++) {
       // Log("token[%u]: %s", i, tokens[i].str);
@@ -409,15 +412,19 @@ word_t eval(const uint p, const uint q, bool *success) {
         }
       }
 
-      if (cnt_brackets == 0 && is_binary_op(tokens[i].type)) {
+      if (cnt_brackets == 0 && is_op(tokens[i].type)) {
         if (op_pos == -1) {
           op_pos = i;
         } else {
           int stored_priority = get_operator_priority(tokens[op_pos].type);
           int current_priority = get_operator_priority(tokens[i].type);
 
-          /* 同优先级，最后被结合的运算符才是主运算符 */
-          if (stored_priority >= current_priority) {
+          /* binary_op, 同优先级，最后被结合的运算符是主运算符 */
+          if (is_binary_op(tokens[i].type) && stored_priority >= current_priority) {
+            op_pos = i;
+          }
+
+          if (is_unary_op(tokens[i].type) && stored_priority > current_priority) {
             op_pos = i;
           }
         }
@@ -430,90 +437,132 @@ word_t eval(const uint p, const uint q, bool *success) {
       return 0;
     }
 
-    word_t val1 = eval(p, op_pos - 1, success);
-    word_t val2 = eval(op_pos + 1, q, success);
+    int op_type = tokens[op_pos].type;
+
+    bool print_flag = false;
+    if (print_flag) {
+      Log("op_pos = %d, op_type = %d", op_pos, op_type);
+    }
+
     word_t result = 0;
 
-    int op_type = tokens[op_pos].type;
-    Log("0x%x %s 0x%x", val1, tokens[op_pos].str, val2);
+    /* <expr> <binary-op> <expr> */
+    if (is_binary_op(op_type)) {
+      word_t val1 = eval(p, op_pos - 1, success);
+      word_t val2 = eval(op_pos + 1, q, success);
+      if (print_flag) {
+        Log("0x%x %s 0x%x", val1, tokens[op_pos].str, val2);
+      }
 
-    switch (op_type) {
-    case TK_OR:
-      result = val1 || val2;
-      break;
-    case TK_AND:
-      result = val1 && val2;
-      break;
-    case TK_BITOR:
-      result = val1 | val2;
-      break;
-    case TK_XOR:
-      result = val1 ^ val2;
-      break;
-    case TK_BITAND:
-      result = val1 & val2;
-      break;
-    case TK_EQ:
-      result = val1 == val2;
-      break;
-    case TK_NE:
-      result = val1 != val2;
-      break;
-    case TK_LE:
-      result = val1 <= val2;
-      break;
-    case TK_GE:
-      result = val1 >= val2;
-      break;
-    case TK_LT:
-      result = val1 < val2;
-      break;
-    case TK_GT:
-      result = val1 > val2;
-      break;
-    case TK_SHL:
-      if (val2 >= 32) {
-        result = 0;
-      } else {
-        result = val1 << val2;
-      }
-      break;
-    case TK_SHR:
-      if (val2 >= 32) {
-        result = 0;
-      } else {
-        result = val1 >> val2;
-      }
-      break;
-    case TK_ADD:
-      result = val1 + val2;
-      break;
-    case TK_SUB:
-      result = val1 - val2;
-      break;
-    case TK_MUL:
-      result = val1 * val2;
-      break;
-    case TK_DIV:
-      if (val2 == 0) {
-        printf("Division by zero [/].\n");
+      switch (op_type) {
+      case TK_OR:
+        result = val1 || val2;
+        break;
+      case TK_AND:
+        result = val1 && val2;
+        break;
+      case TK_BITOR:
+        result = val1 | val2;
+        break;
+      case TK_XOR:
+        result = val1 ^ val2;
+        break;
+      case TK_BITAND:
+        result = val1 & val2;
+        break;
+      case TK_EQ:
+        result = val1 == val2;
+        break;
+      case TK_NE:
+        result = val1 != val2;
+        break;
+      case TK_LE:
+        result = val1 <= val2;
+        break;
+      case TK_GE:
+        result = val1 >= val2;
+        break;
+      case TK_LT:
+        result = val1 < val2;
+        break;
+      case TK_GT:
+        result = val1 > val2;
+        break;
+      case TK_SHL:
+        if (val2 >= 32) {
+          result = 0;
+        } else {
+          result = val1 << val2;
+        }
+        break;
+      case TK_SHR:
+        if (val2 >= 32) {
+          result = 0;
+        } else {
+          result = val1 >> val2;
+        }
+        break;
+      case TK_ADD:
+        result = val1 + val2;
+        break;
+      case TK_SUB:
+        result = val1 - val2;
+        break;
+      case TK_MUL:
+        result = val1 * val2;
+        break;
+      case TK_DIV:
+        if (val2 == 0) {
+          printf("Division by zero [/].\n");
+          *success = false;
+          return 0;
+        }
+        result = val1 / val2;
+        break;
+      case TK_MOD:
+        if (val2 == 0) {
+          printf("Division by zero [%%].\n");
+          *success = false;
+          return 0;
+        }
+        result = val1 % val2;
+        break;
+      default:
+        printf("Unknown binary operator: %s\n", tokens[op_pos].str);
         *success = false;
         return 0;
       }
-      result = val1 / val2;
-      break;
-    case TK_MOD:
-      if (val2 == 0) {
-        printf("Division by zero [%%].\n");
+    }
+
+    /* <unary-op> <expr> */
+    if (is_unary_op(op_type)) {
+      word_t val2 = eval(op_pos + 1, q, success);
+      if (print_flag) {
+        Log(" %s 0x%x", tokens[op_pos].str, val2);
+      }
+
+      switch (op_type) {
+      case TK_DEREF: {
+        result = paddr_read((paddr_t)val2, 4);
+        break;
+      }
+      case TK_POS:
+        result = +val2;
+        break;
+      case TK_NEG:
+        result = -val2;
+        break;
+      case TK_BITNOT:
+        result = ~val2;
+        break;
+      case TK_NOT:
+        result = !val2;
+        break;
+      default:
+        printf("Unknown unary operator: %s\n", tokens[op_pos].str);
         *success = false;
         return 0;
       }
-      result = val1 % val2;
-      break;
-    default:
-      printf("Found unknown op type when evaluating expression.\n");
-      *success = false;
-      return 0;
     }
 
     *success = true;

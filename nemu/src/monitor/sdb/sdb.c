@@ -181,6 +181,125 @@ static int cmd_info(char *args) {
   return 0;
 }
 
+enum {
+  fmt_o = 1,
+  fmt_x,
+  fmt_d,
+  fmt_u,
+  fmt_t,
+  fmt_f,
+  fmt_a,
+  fmt_i,
+  fmt_c,
+  fmt_s,
+  fmt_z,
+};
+
+enum {
+  size_b = 1,
+  size_h,
+  size_w,
+  size_g,
+};
+
+static char get_fmt(char **ptr_expr_str, bool *success) {
+  char *fmt_str = *ptr_expr_str;
+  while (*fmt_str == *delimiter) {
+    fmt_str++;
+  }
+
+  char fmt = fmt_u;
+  if (*fmt_str == '/') {
+    fmt_str++;
+    switch (*fmt_str) {
+    case 'o':
+      fmt = fmt_o;
+      break;
+    case 'x':
+      fmt = fmt_x;
+      break;
+    case 'd':
+      fmt = fmt_d;
+      break;
+    case 'u':
+      fmt = fmt_u;
+      break;
+    case 't':
+      fmt = fmt_t;
+      break;
+    case 'f':
+      fmt = fmt_f;
+      break;
+    case 'a':
+      fmt = fmt_a;
+      break;
+    case 'i':
+      fmt = fmt_i;
+      break;
+    case 'c':
+      fmt = fmt_c;
+      break;
+    case 's':
+      fmt = fmt_s;
+      break;
+    case 'z':
+      fmt = fmt_z;
+      break;
+    default:
+      printf("Invalid format in \"%s\".\n", *ptr_expr_str);
+      *success = false;
+      return 0;
+    }
+
+    fmt_str++;
+  }
+
+  *ptr_expr_str = fmt_str;
+  *success = true;
+  return fmt;
+}
+
+static void print_fmt(char fmt, word_t result) {
+  switch (fmt) {
+  case fmt_o:
+    printf("0%" PRIo32 "\n", result);
+    break;
+  case fmt_x:
+    printf("0x%" PRIx32 "\n", result);
+    break;
+  case fmt_d:
+    printf("%" PRId32 "\n", result);
+    break;
+  case fmt_u:
+    printf("%" PRIu32 "\n", result);
+    break;
+  case fmt_t:
+    TODO();
+    break;
+  case fmt_f:
+    printf("%lf\n", (double)result);
+    break;
+  case fmt_a:
+    printf(ANSI_FMT("%x", ANSI_FG_BLUE) "\n", result);
+    break;
+  case fmt_i:
+    TODO();
+    break;
+  case fmt_c:
+    printf("%c '%o'\n", (char)result, (char)result);
+    break;
+  case fmt_s:
+    printf("%s\n", (char *)(&result));
+    break;
+  case fmt_z:
+    printf(FMT_WORD "\n", result);
+    break;
+  default:
+    printf("Invalid format \"%c\".\n", fmt);
+    return;
+  }
+}
+
 /* x N EXPR */
 static int cmd_x(char *args) {
   if (args == NULL) {
@@ -236,7 +355,7 @@ static int cmd_x(char *args) {
   for (uint64_t i = 0; i < num; i++) {
     paddr_t cur_addr = base_addr + i * byte_num;
     word_t data = paddr_read(cur_addr, byte_num);
-    printf(FMT_WORD ": " FMT_WORD "\n", cur_addr, data);
+    printf(ANSI_FMT(FMT_WORD, ANSI_FG_BLUE) ": " FMT_WORD "\n", cur_addr, data);
   }
 
   return 0;
@@ -248,6 +367,8 @@ static char p_history_str[MAX_TOKEN_NUM + 1] = {};
 /* p EXPR */
 static int cmd_p(char *args) {
   char *expr_str = NULL;
+  bool success = false;
+  char fmt = 0;
 
   if (args == NULL) {
     if (cnt_p == 0) {
@@ -263,17 +384,13 @@ static int cmd_p(char *args) {
       return 0;
     }
     expr_str = args;
-    if (expr_str == NULL) {
-      if (cnt_p == 0) {
-        printf("The history is empty.\n");
-        return 0;
-      } else {
-        expr_str = p_history_str;
-      }
-    }
   }
 
-  bool success = false;
+  fmt = get_fmt(&expr_str, &success);
+  if (success == false) {
+    return 0;
+  }
+
   word_t result = expr(expr_str, &success);
   if (!success) {
     return 0;
@@ -281,7 +398,8 @@ static int cmd_p(char *args) {
   strcpy(p_history_str, expr_str);
   cnt_p++;
 
-  printf(ANSI_FMT("$%u", ANSI_FG_BLUE) " = %" PRIu32 "\n", cnt_p, result);
+  printf(ANSI_FMT("$%u", ANSI_FG_BLUE) " = ", cnt_p);
+  print_fmt(fmt, result);
 
   return 0;
 }
@@ -289,6 +407,7 @@ static int cmd_p(char *args) {
 /* w EXPR */
 static int cmd_w(char *args) {
   char *expr_str = NULL;
+  bool success = false;
 
   if (args == NULL) {
     printf("Argument required (expression to compute).\n");
@@ -301,7 +420,6 @@ static int cmd_w(char *args) {
     expr_str = args;
   }
 
-  bool success = false;
   word_t result = expr(expr_str, &success);
   if (!success) {
     return 0;
@@ -380,17 +498,16 @@ static struct {
 
 static int cmd_help(char *args) {
   /* extract the first argument */
-  char *arg = strtok(NULL, " ");
+  char *arg = strtok(NULL, delimiter);
   int i;
 
   if (arg == NULL) {
     /* no argument given */
-    for (i = 0; i < NR_CMD; i ++) {
+    for (i = 0; i < NR_CMD; i++) {
       printf("%s - %s\n", cmd_table[i].name, cmd_table[i].description);
     }
-  }
-  else {
-    for (i = 0; i < NR_CMD; i ++) {
+  } else {
+    for (i = 0; i < NR_CMD; i++) {
       if (strcmp(arg, cmd_table[i].name) == 0) {
         printf("%s - %s\n", cmd_table[i].name, cmd_table[i].description);
         return 0;
@@ -401,9 +518,7 @@ static int cmd_help(char *args) {
   return 0;
 }
 
-void sdb_set_batch_mode() {
-  is_batch_mode = true;
-}
+void sdb_set_batch_mode() { is_batch_mode = true; }
 
 void sdb_mainloop() {
   if (is_batch_mode) {
@@ -439,14 +554,18 @@ void sdb_mainloop() {
 #endif
 
     int i;
-    for (i = 0; i < NR_CMD; i ++) {
+    for (i = 0; i < NR_CMD; i++) {
       if (strcmp(cmd, cmd_table[i].name) == 0) {
-        if (cmd_table[i].handler(args) < 0) { return; }
+        if (cmd_table[i].handler(args) < 0) {
+          return;
+        }
         break;
       }
     }
 
-    if (i == NR_CMD) { printf("Unknown command \"%s\".\n", cmd); }
+    if (i == NR_CMD) {
+      printf("Unknown command \"%s\".\n", cmd);
+    }
   }
 }
 
