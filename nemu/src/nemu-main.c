@@ -23,9 +23,8 @@ uint64_t str_to_num(char *nptr, bool *success);
 word_t expr(char *, bool *);
 
 int main(int argc, char *argv[]) {
-  int test_pos = 2;
-  if (argc > test_pos && strcmp(argv[test_pos], "-t") == 0) {
-    FILE *fp = fopen(argv[test_pos], "r");
+  if (argc >= 3 && strcmp(argv[1], "test") == 0) {
+    FILE *fp = fopen(argv[2], "r");
     assert(fp != NULL);
     
     char result_str[128];
