@@ -26,11 +26,10 @@ const char *regs[] = {
 };
 
 void isa_reg_display() {
-  printf("Registers:\n");
-  for (int i = 0; i < 32; i++) {
-    printf("%-8s 0x%-8" PRIx32 "\t%-16" PRIu32 "\n", regs[i], gpr(i), gpr(i));
+  for (int i = 1; i < 32; i++) {
+    printf("%-14s 0x%-14" PRIx32 "\t%-8" PRIu32 "\n", regs[i], gpr(i), gpr(i));
   }
-  printf("%-8s 0x%-8" PRIx32 "\t%-16" PRIu32 "\n", "pc", cpu.pc, cpu.pc);
+  printf("%-14s 0x%-14" PRIx32 "\t%-8" PRIu32 "\n", "pc", cpu.pc, cpu.pc);
 }
 
 void isa_watchpoint_display() { display_all_wp(); }
