@@ -10,6 +10,8 @@
 !README.md
 !.gitignore
 !init.sh
+!flake.nix
+!overlay.nix
 /fceux-am
 /am-kernels
 /nvboard
