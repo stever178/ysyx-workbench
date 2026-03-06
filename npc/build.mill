@@ -134,12 +134,10 @@ object `npc-top` extends BaseModule {
 }
 
 def allTests() = T.command {
-  val root = T.workspace
-
-  os.proc("mill", "utils.test.runMain", "utils.TestFuType").call(cwd = root)
-  os.proc("mill", "npc-core.test.runMain", "npc.core.fu.PrintFuType").call(cwd = root)
-  os.proc("mill", "npc-core.test.runMain", "npc.core.fu.PrintOpType").call(cwd = root)
-  os.proc("mill", "npc-core.test.runMain", "npc.core.isa.PrintImmType").call(cwd = root)
-  os.proc("mill", "npc-backend.test.testOnly", "npc.backend.decode.DecoderTest").call(cwd = root)
-  os.proc("mill", "npc-backend.runMain", "npc.backend.decode.DecoderElaborate").call(cwd = root)
+  utils.test.runMain("utils.TestFuType")()
+  `npc-core`.test.runMain("npc.core.fu.PrintFuType")()
+  `npc-core`.test.runMain("npc.core.fu.PrintOpType")()
+  `npc-core`.test.runMain("npc.core.isa.PrintImmType")()
+  `npc-backend`.test.testOnly("npc.backend.decode.DecoderTest")()
+  `npc-backend`.runMain("npc.backend.decode.DecoderElaborate")()
 }
