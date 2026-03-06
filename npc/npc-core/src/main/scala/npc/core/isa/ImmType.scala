@@ -1,13 +1,11 @@
-package npc.backend.fu
+package npc.core.isa
 
 import chisel3._
 import chisel3.util._
 import scala.language.implicitConversions
 
 object ImmType extends Enumeration {
-  class IncType(i: Int, name: String) extends super.Val(i, name)
-
-  final def IncType(i: Int, name: String): IncType = new IncType(i, name)
+  case class IncType(i: Int, name: String) extends super.Val(i, name)
 
   implicit class fromValToLiteral(x: Value) {
     def U: UInt = x.asInstanceOf[IncType].id.U

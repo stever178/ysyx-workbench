@@ -1,8 +1,11 @@
-package npc.backend.fu
+package npc.core.fu
 
 import chisel3._
 
-object TestFuType extends App {
+/* 
+mill npc-core.test.runMain npc.core.fu.PrintFuType
+ */
+object PrintFuType extends App {
   println(s"FuType.num = ${FuType.num}")
   println(s"FuType.width = ${FuType.width}")
 

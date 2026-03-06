@@ -1,4 +1,4 @@
-package npc.backend.fu
+package npc.core.fu
 
 import chisel3._
 import chisel3.util._
@@ -7,9 +7,7 @@ import scala.language.implicitConversions
 import utils.EnumUtils.OHEnumeration
 
 object FuType extends OHEnumeration {
-  class OHType(i: Int, name: String) extends super.OHVal(i, name)
-
-  final def OHType(i: Int, name: String): OHType = new OHType(i, name)
+  case class OHType(i: Int, name: String) extends super.OHVal(i, name)
 
   implicit class fromOHValToLiteral(x: Value) {
     def ohid: BigInt = x.asInstanceOf[OHType].ohid
@@ -26,7 +24,7 @@ object FuType extends OHEnumeration {
   }
 
   lazy val num = this.values.size
-  lazy val width = log2Ceil(maxId + 1)
+  lazy val width = num
 
   val undef = addType(name = "undef")
 

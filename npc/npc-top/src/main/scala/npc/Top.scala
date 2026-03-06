@@ -5,12 +5,12 @@ import chisel3.util._
 // import freechips.rocketchip.diplomacy.{LazyModule, LazyModuleImp}
 // import org.chipsalliance.diplomacy.lazymodule.{LazyModule, LazyModuleImp}
 
-import utils.Params.defaultParams
+import utils._
 import npc._
+import npc.core._
 import npc.frontend.fetch.Fetcher
 import npc.backend.decode.Decoder
 import npc.backend.exu.ExeUnit
-import npc.regs.RiscvRegFileWithPC
 
 class NPCTop(implicit p: CoreParameters) extends Module {
 // class NPCTop()(implicit p: CoreParameters) extends LazyModule {
@@ -52,7 +52,7 @@ class NPCTop(implicit p: CoreParameters) extends Module {
       // exeUnit.io.fuType       := decoder.io.fuType
       // exeUnit.io.operandTypes := decoder.io.operandTypes
       // exeUnit.io.regIndices   := decoder.io.regIndices
-      // exeUnit.io.immValue     := decoder.io.immValue
+      // exeUnit.io.imm     := decoder.io.imm
       exeUnit.io <> decoder.io
 
       // ===================== 3. 执行单元（ExeUnit）连接 =====================

@@ -1,9 +1,11 @@
 BUILD_DIR = ./build
 
-PRJ = playground
+PRJ = npc
 
 test:
-	mill -i $(PRJ).test
+# 	mill -i $(PRJ).test
+	@echo "Running tests..."
+	mill --no-server allTests
 
 verilog:
 	$(call git_commit, "generate verilog")

@@ -3,10 +3,11 @@ package utils
 import chisel3._
 import utils.EnumUtils.OHEnumeration
 
+// mill utils.test.runMain utils.TestFuType
 object FuType extends OHEnumeration {
-  class OHType(i: Int, name: String) extends super.OHVal(i, name)
+  case class OHType(i: Int, name: String) extends super.OHVal(i, name)
 
-  def OHType(i: Int, name: String): OHType = new OHType(i, name)
+  // def OHType(i: Int, name: String): OHType = new OHType(i, name)
 
   implicit class fromOHValToLiteral(x: OHType) {
     def U: UInt = x.ohid.U

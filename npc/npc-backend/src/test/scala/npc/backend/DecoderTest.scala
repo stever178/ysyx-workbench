@@ -8,7 +8,11 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.must.Matchers
 
-import utils.Params._
+import npc.core.params.Params._
+
+/* 
+mill npc-backend.test.testOnly npc.backend.decode.DecoderTest
+ */
 
 // class Ex1Tester extends AnyFlatSpec {
 //   "Ex1 Module" should "select correct input based on Y" in {
@@ -23,10 +27,10 @@ class DecoderTest extends AnyFreeSpec with Matchers {
         dut.io.instr.poke("hff010113".U)
         dut.clock.step()
 
-        dut.io.regIndice3.expect(2.U)
-        dut.io.regIndice1.expect(2.U)
-        dut.io.regIndice2.expect(16.U)
-        dut.io.immValue.expect(BigInt("ffffffff0", 16).toInt)
+        dut.io.out.rd.expect(2.U)
+        dut.io.out.rs1.expect(2.U)
+        dut.io.out.rs2.expect(16.U)
+        dut.io.out.imm.expect(BigInt("ffffffff0", 16).toInt)
       }
     }
 
@@ -36,10 +40,10 @@ class DecoderTest extends AnyFreeSpec with Matchers {
         dut.io.instr.poke("hffc10113".U)
         dut.clock.step()
 
-        dut.io.regIndice3.expect(2.U)
-        dut.io.regIndice1.expect(2.U)
-        dut.io.regIndice2.expect(28.U)
-        dut.io.immValue.expect(BigInt("fffffffc", 16).toInt)
+        dut.io.out.rd.expect(2.U)
+        dut.io.out.rs1.expect(2.U)
+        dut.io.out.rs2.expect(28.U)
+        dut.io.out.imm.expect(BigInt("fffffffc", 16).toInt)
       }
     }
 
@@ -49,10 +53,10 @@ class DecoderTest extends AnyFreeSpec with Matchers {
         dut.io.instr.poke("h0a4000ef".U)
         dut.clock.step()
 
-        dut.io.regIndice3.expect(1.U)
-        dut.io.regIndice1.expect(0.U)
-        dut.io.regIndice2.expect(4.U)
-        dut.io.immValue.expect(BigInt("000000a4", 16).toInt)
+        dut.io.out.rd.expect(1.U)
+        dut.io.out.rs1.expect(0.U)
+        dut.io.out.rs2.expect(4.U)
+        dut.io.out.imm.expect(BigInt("000000a4", 16).toInt)
       }
     }
 
@@ -62,10 +66,10 @@ class DecoderTest extends AnyFreeSpec with Matchers {
         dut.io.instr.poke("h00009117".U)
         dut.clock.step()
 
-        dut.io.regIndice3.expect(2.U)
-        dut.io.regIndice1.expect(1.U)
-        dut.io.regIndice2.expect(0.U)
-        dut.io.immValue.expect(BigInt("00009000", 16).toInt)
+        dut.io.out.rd.expect(2.U)
+        dut.io.out.rs1.expect(1.U)
+        dut.io.out.rs2.expect(0.U)
+        dut.io.out.imm.expect(BigInt("00009000", 16).toInt)
       }
     }
 
@@ -75,10 +79,10 @@ class DecoderTest extends AnyFreeSpec with Matchers {
         dut.io.instr.poke("h00050463".U)
         dut.clock.step()
 
-        dut.io.regIndice3.expect(8.U)
-        dut.io.regIndice1.expect(10.U)
-        dut.io.regIndice2.expect(0.U)
-        dut.io.immValue.expect(BigInt("00000008", 16).toInt)
+        dut.io.out.rd.expect(8.U)
+        dut.io.out.rs1.expect(10.U)
+        dut.io.out.rs2.expect(0.U)
+        dut.io.out.imm.expect(BigInt("00000008", 16).toInt)
       }
     }
   }

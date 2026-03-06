@@ -5,14 +5,15 @@ import chisel3.util.BitPat
 import chisel3.util.experimental.decode._
 import freechips.rocketchip.rocket.Instructions._
 
-import npc.backend.fu._
+import npc.core.fu._
+import npc.core.isa._
 
 object FuTypeField extends DecodeField[InstructionPattern, UInt] {
   override def name: String = "FuTypeField"
-  override def chiselType: UInt = UInt(FuType.num.W)
+  override def chiselType: UInt = UInt(FuType.width.W)
 
   override def genTable(pattern: InstructionPattern): BitPat = {
-    val fuTypeUInt = pattern.fuType.U(FuType.num.W)
+    val fuTypeUInt = pattern.fuType.U(FuType.width.W)
     BitPat(fuTypeUInt)
   }
 }

@@ -4,6 +4,7 @@ import chisel3._
 import chisel3.util._
 
 import utils._
+import npc.core._
 
 class Fetcher extends Module {
 // class Fetcher(implicit p: CoreParameters) extends LazyModule {

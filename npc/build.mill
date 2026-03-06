@@ -109,14 +109,20 @@ object utils extends BaseModule { m =>
   }
 }
 
-object `npc-frontend` extends BaseModule { m =>
+object `npc-core` extends BaseModule { m =>
   override def moduleDeps = Seq(utils)
   object test extends BaseTests {
   }
 }
 
+object `npc-frontend` extends BaseModule { m =>
+  override def moduleDeps = Seq(`npc-core`)
+  object test extends BaseTests {
+  }
+}
+
 object `npc-backend` extends BaseModule { m =>
-  override def moduleDeps = Seq(utils, `rocket-chip`)
+  override def moduleDeps = Seq(`npc-core`, `rocket-chip`)
   object test extends BaseTests {
   }
 }
@@ -125,4 +131,15 @@ object `npc-top` extends BaseModule {
   override def moduleDeps = Seq(`npc-frontend`, `npc-backend`)
   object test extends BaseTests {
   }
+}
+
+def allTests() = T.command {
+  val root = T.workspace
+
+  os.proc("mill", "utils.test.runMain", "utils.TestFuType").call(cwd = root)
+  os.proc("mill", "npc-core.test.runMain", "npc.core.fu.PrintFuType").call(cwd = root)
+  os.proc("mill", "npc-core.test.runMain", "npc.core.fu.PrintOpType").call(cwd = root)
+  os.proc("mill", "npc-core.test.runMain", "npc.core.isa.PrintImmType").call(cwd = root)
+  os.proc("mill", "npc-backend.test.testOnly", "npc.backend.decode.DecoderTest").call(cwd = root)
+  os.proc("mill", "npc-backend.runMain", "npc.backend.decode.DecoderElaborate").call(cwd = root)
 }

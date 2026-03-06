@@ -1,8 +1,11 @@
-package npc.backend.fu
+package npc.core.isa
 
 import chisel3._
 
-object TestImmType extends App {
+/* 
+mill npc-core.test.runMain npc.core.isa.PrintImmType
+ */
+object PrintImmType extends App {
   println(s"ImmType.num = ${ImmType.num}")
   println(s"ImmType.width = ${ImmType.width}")
 
